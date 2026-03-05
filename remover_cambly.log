@@ -1,0 +1,15 @@
+20:44:05 ERROR Pasta nao encontrada: C:\Users\marti\Documents\Projetos\buscacnpjwork\site-cnpj\cnpj
+20:44:20 INFO =======================================================
+20:44:20 INFO Remover Cambly — BuscaCNPJ.work
+20:44:20 INFO Paginas encontradas: 1163
+20:44:20 INFO Pasta: C:\Users\marti\Documents\Projetos\buscacnpjwork\cnpj
+20:44:20 INFO =======================================================
+20:44:37 INFO [500/1163] 500 paginas limpas...
+20:44:55 INFO [1000/1163] 1000 paginas limpas...
+20:45:02 INFO =======================================================
+20:45:02 INFO CONCLUIDO
+20:45:02 INFO   Limpas         : 1163
+20:45:02 INFO   Sem injecao    : 0
+20:45:02 INFO   Erros/suspeitas: 0
+20:45:02 INFO =======================================================
+20:45:02 INFO Proximo: git add . && git commit -m "Remove banners Cambly" && git push
