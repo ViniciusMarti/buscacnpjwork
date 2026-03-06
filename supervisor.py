@@ -26,7 +26,7 @@ TIMEOUT_SCRIPT     = 3600  # 1 hora por script
 
 # Pasta monitorada e limite de arquivos
 PASTA_PROJETO  = os.path.dirname(os.path.abspath(__file__))
-LIMITE_ARQUIVOS = 19500
+LIMITE_ARQUIVOS = 100000
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
