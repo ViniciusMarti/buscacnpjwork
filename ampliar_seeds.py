@@ -23,7 +23,7 @@ API_BRASIL    = "https://brasilapi.com.br/api/cnpj/v1/"
 API_MINHA_REC = "https://minhareceita.org/"
 MAX_WORKERS   = 6
 SLEEP         = 0.4
-META_NOVOS    = 2000   # quantos CNPJs novos queremos encontrar
+META_NOVOS    = 50   # quantos CNPJs novos queremos encontrar
 SAVE_EVERY    = 50
 
 logging.basicConfig(level=logging.INFO,
