@@ -74,7 +74,7 @@ def norm(data):
 
 # CSS agora é externo (/cnpj.css) — não há mais inline aqui
 CNPJ_HEAD = """\
-  <link rel="stylesheet" href="/cnpj.css">
+  <link rel="stylesheet" href="../../cnpj.css?v=1.1">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">"""
 # SVG icons para os itens das listas
 ICON_CNAE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'
@@ -368,7 +368,7 @@ def gerar_index(index_links, total):
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>BuscaCNPJ.work — Consulta Gratuita de CNPJ</title>
 <meta name="description" content="Consulte dados públicos de qualquer empresa pelo CNPJ. Gratuito.">
-<link rel="canonical" href="{DOMAIN}/"></head>
+<link rel="canonical" href="{DOMAIN}/"><link rel="stylesheet" href="cnpj.css?v=1.1"></head>
 <body>
 <header><div class="hi"><a class="logo" href="{DOMAIN}">buscacnpj.work</a>
 <nav><a href="{DOMAIN}/sobre/">sobre</a></nav></div></header>

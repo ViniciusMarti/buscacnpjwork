@@ -44,9 +44,9 @@ def auditoria_e_reparo(folder: Path):
 
     problemas = []
     
-    # 1. Verifica CSS
-    if 'href="/cnpj.css"' not in html:
-        problemas.append("CSS_AUSENTE")
+    # 1. Verifica CSS (garante caminho relativo e versão 1.1)
+    if 'href="../../cnpj.css?v=1.1"' not in html:
+        problemas.append("CSS_ANTIGO_OU_AUSENTE")
         
     # 2. Verifica Integridade Básica
     if "</html>" not in html.lower() or "</body>" not in html.lower():
