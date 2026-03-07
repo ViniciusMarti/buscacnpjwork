@@ -17,6 +17,21 @@
   <meta name="description" content="Dados do CNPJ 00.000.000/0001-91 — BANCO DO BRASIL SA. Situação: ATIVA. Endereço: SAUN QUADRA 5 BLOCO B TORRE I, BRASILIA - DF. Consulta gratuita da Receita Federal.">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
   <link rel="canonical" href="https://buscacnpj.work/cnpj/00000000000191/">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(function() {
+        const originalInner = btn.innerHTML;
+        btn.innerHTML = '<span style="font-size:12px; font-weight:700; color: #10b981;">Copiado!</span>';
+        setTimeout(() => { btn.innerHTML = originalInner; }, 2000);
+      });
+    }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BANCO DO BRASIL SA — CNPJ 00.000.000/0001-91 | BuscaCNPJ.work</title>
+  <meta name="description" content="Dados do CNPJ 00.000.000/0001-91 — BANCO DO BRASIL SA. Situação: ATIVA. Endereço: SAUN QUADRA 5 BLOCO B TORRE I, BRASILIA - DF. Consulta gratuita da Receita Federal.">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <link rel="canonical" href="https://buscacnpj.work/cnpj/00000000000191/">
   <meta property="og:type"        content="website">
   <meta property="og:title"       content="BANCO DO BRASIL SA — CNPJ 00.000.000/0001-91">
   <meta property="og:description" content="Dados públicos do CNPJ 00.000.000/0001-91 — BANCO DO BRASIL SA. Situação ATIVA. Receita Federal.">
@@ -62,42 +77,51 @@
       --card-bg: #ffffff;
       --btn-bg:  #111111;
       --btn-fg:  #ffffff;
-      --accent:  #0055cc;
+      --accent:  #2563eb;
       --shadow:  0 2px 12px rgba(0,0,0,0.07);
       --shadow2: 0 8px 32px rgba(0,0,0,0.10);
+      --shadow-color: rgba(0, 0, 0, 0.1);
       --green-bg: #f0fdf4; --green-tx: #166534; --green-bd: #bbf7d0;
       --red-bg:   #fef2f2; --red-tx:   #991b1b; --red-bd:   #fecaca;
       --yellow-bg:#fffbeb; --yellow-tx:#92400e; --yellow-bd:#fde68a;
+      
+      --hostinger-color: #673de6;
+      --affiliate-bg: #ffffff;
+      --affiliate-border: rgba(103, 61, 230, 0.2);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg:      #0f0f0f;
-        --bg2:     #1a1a1a;
-        --bg3:     #222222;
-        --text:    #f0f0f0;
-        --text2:   #aaaaaa;
-        --muted:   #666666;
-        --border:  #2a2a2a;
-        --card-bg: #1a1a1a;
-        --btn-bg:  #f0f0f0;
-        --btn-fg:  #111111;
-        --accent:  #6699ff;
+        --bg:      #0f172a;
+        --bg2:     #1e293b;
+        --bg3:     #334155;
+        --text:    #f8fafc;
+        --text2:   #cbd5e1;
+        --muted:   #94a3b8;
+        --border:  rgba(255, 255, 255, 0.1);
+        --card-bg: rgba(30, 41, 59, 0.6);
+        --btn-bg:  #f8fafc;
+        --btn-fg:  #0f172a;
+        --accent:  #3b82f6;
         --shadow:  0 2px 12px rgba(0,0,0,0.4);
         --shadow2: 0 8px 32px rgba(0,0,0,0.5);
-        --green-bg: #052e16; --green-tx: #86efac; --green-bd: #166534;
-        --red-bg:   #450a0a; --red-tx:   #fca5a5; --red-bd:   #991b1b;
-        --yellow-bg:#451a03; --yellow-tx:#fcd34d; --yellow-bd:#92400e;
+        --shadow-color: rgba(0, 0, 0, 0.5);
+        --green-bg: #064e3b; --green-tx: #6ee7b7; --green-bd: #059669;
+        --red-bg:   #7f1d1d; --red-tx:   #fca5a5; --red-bd:   #b91c1c;
+        --yellow-bg:#78350f; --yellow-tx:#fcd34d; --yellow-bd:#d97706;
+
+        --affiliate-bg: linear-gradient(135deg, rgba(103, 61, 230, 0.05), rgba(30, 41, 59, 0.8));
+        --affiliate-border: rgba(103, 61, 230, 0.3);
       }
     }
 
     html { scroll-behavior: smooth; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                   Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.7;
       color: var(--text);
       background: var(--bg);
       font-size: 1rem;
+      transition: background-color 0.3s, color 0.3s;
     }
 
     /* ── Header ── */
@@ -169,9 +193,26 @@
     /* ── Título ── */
     h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 900;
          color: var(--text); letter-spacing: -.5px; line-height: 1.2;
-         margin-bottom: 8px; }
+         margin-bottom: 0; }
     .cnpj-fmt { font-size: 1rem; color: var(--muted); font-weight: 400;
-                margin-bottom: 28px; letter-spacing: .5px; }
+                margin-bottom: 0; letter-spacing: .5px; }
+
+    .copy-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      height: 32px;
+    }
+    .copy-btn:hover { background: var(--border); transform: translateY(-1px); }
+    .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .cnpj-row { display: flex; align-items: center; gap: 8px; margin-bottom: 28px; }
 
     /* ── Seção label ── */
     .sec-label {
@@ -241,9 +282,58 @@
       font-size: .82rem;
       color: var(--muted);
       display: flex; gap: 10px; align-items: flex-start;
+      margin-bottom: 60px;
     }
     .fonte p { margin: 0; color: var(--muted); font-size: .82rem; }
     .fonte a { color: var(--accent); }
+
+    /* Affiliate Section Styles */
+    .affiliate-section {
+      width: 100%;
+      background: var(--affiliate-bg);
+      border: 1px solid var(--affiliate-border);
+      border-radius: 24px;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+      box-shadow: 0 20px 40px -10px var(--shadow-color);
+    }
+    .affiliate-header { display: flex; flex-direction: column; align-items: center; }
+    .partner-label {
+      background: rgba(103, 61, 230, 0.15); color: var(--hostinger-color);
+      padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;
+      margin-bottom: 24px; text-transform: uppercase;
+    }
+    @media (prefers-color-scheme: dark) { .partner-label { color: #c4b5fd; } }
+    .partner-logo { height: 48px; margin-bottom: 20px; object-fit: contain; }
+    .affiliate-header h2 { font-size: 1.8rem; margin-bottom: 12px; color: var(--text); font-weight: 800; line-height: 1.2; }
+    .affiliate-header p { font-size: 1rem; color: var(--muted); margin-bottom: 32px; max-width: 600px; }
+    .offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; width: 100%; }
+    .offer-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; text-align: left; transition: all 0.3s ease; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px -10px var(--shadow-color); }
+    .offer-image { height: 140px; background-size: cover; background-position: center; position: relative; }
+    .offer-image::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(to top, var(--card-bg), transparent); }
+    .offer-content { padding: 0 24px 24px 24px; flex: 1; display: flex; flex-direction: column; }
+    .offer-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--hostinger-color); transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; z-index: 2; }
+    .offer-card:hover { border-color: rgba(103, 61, 230, 0.4); transform: translateY(-5px); box-shadow: 0 20px 40px var(--shadow-color); }
+    .offer-card:hover::before { transform: scaleX(1); }
+    .offer-badge { display: inline-block; align-self: flex-start; margin-top: -12px; margin-bottom: 12px; position: relative; z-index: 2; background: rgba(103, 61, 230, 0.15); color: var(--hostinger-color); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    @media (prefers-color-scheme: dark) { .offer-badge { color: #c4b5fd; } }
+    .offer-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+    .offer-desc { color: var(--muted); margin-bottom: 20px; font-size: 0.9rem; flex: 1; }
+    .offer-price { font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .offer-price span { font-size: 0.9rem; color: var(--muted); font-weight: 500; }
+    .offer-features { list-style: none; margin-bottom: 24px; }
+    .offer-features li { display: flex; align-items: center; font-size: 0.85rem; color: var(--text); margin-bottom: 8px; font-weight: 500; }
+    .offer-features li svg { width: 16px; height: 16px; color: #10b981; margin-right: 10px; }
+    .btn-offer { display: block; width: 100%; padding: 14px; background: var(--hostinger-color); color: #fff; text-align: center; text-decoration: none; font-weight: 700; border-radius: 12px; transition: background 0.2s, transform 0.1s; font-size: 0.95rem; }
+    .btn-offer:hover { background: #5025d1; transform: scale(1.02); color: #fff; }
+    .disclaimer { margin-top: 24px; font-size: 0.8rem; color: var(--muted); text-align: center; width: 100%; }
 
     /* ── Footer ── */
     footer {
@@ -262,6 +352,7 @@
 
     @media (max-width: 600px) {
       .fields { grid-template-columns: 1fr 1fr; }
+      .affiliate-section { padding: 32px 16px; }
     }
     @media (max-width: 400px) {
       .fields { grid-template-columns: 1fr; }
@@ -317,8 +408,20 @@
 
   <!-- Badge + Título -->
   <div class="badge badge-ativa">✅ Ativa</div>
-  <h1>BANCO DO BRASIL SA</h1>
-  <p class="cnpj-fmt">CNPJ 00.000.000/0001-91</p>
+  
+  <div class="title-row">
+    <h1>BANCO DO BRASIL SA</h1>
+    <button class="copy-btn" onclick="copyText('BANCO DO BRASIL SA', this)" title="Copiar Razão Social">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+    </button>
+  </div>
+  
+  <div class="cnpj-row">
+    <p class="cnpj-fmt">CNPJ 00.000.000/0001-91</p>
+    <button class="copy-btn" onclick="copyText('00000000000191', this)" title="Copiar CNPJ">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+    </button>
+  </div>
 
   <!-- ── Dados Gerais ── -->
   <p class="sec-label">Dados Gerais</p>
@@ -439,6 +542,53 @@
     Para correções, acesse diretamente o <a href="https://www.gov.br/receitafederal" target="_blank" rel="noopener">portal da Receita Federal</a>
     ou <a href="/contato/">entre em contato</a>.</p>
   </div>
+
+  <!-- Start of Affiliate Section -->
+  <div class="affiliate-section">
+    <div class="affiliate-header">
+      <div class="partner-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        Recomendação de Parceiro
+      </div>
+      <img src="/hostinger_logo.png" alt="Hostinger Brasil" class="partner-logo">
+      <h2>Transforme sua ideia num negócio online de sucesso</h2>
+      <p>Aproveite nossa indicação exclusiva com a <strong>Hostinger</strong> e coloque o site da sua empresa no ar ainda hoje com a melhor performance do Brasil.</p>
+    </div>
+
+    <div class="offers">
+      <div class="offer-card">
+        <div class="offer-image" style="background-image: url('https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=400');"></div>
+        <div class="offer-content">
+          <span class="offer-badge">Hospedagem de Sites</span>
+          <h3 class="offer-title">Business Web Hosting</h3>
+          <p class="offer-desc">Potência e recursos avançados, ideal para empresas que buscam alta velocidade.</p>
+          <div class="offer-price">R$ 19,99<span>/mês</span></div>
+          <ul class="offer-features">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Até 50 websites</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 GB de Armazenamento</li>
+          </ul>
+          <a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" target="_blank" class="btn-offer">Ver o Plano Business</a>
+        </div>
+      </div>
+
+      <div class="offer-card">
+        <div class="offer-image" style="background-image: url('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=400');"></div>
+        <div class="offer-content">
+          <span class="offer-badge">E-mail Profissional</span>
+          <h3 class="offer-title">Premium Business Email</h3>
+          <p class="offer-desc">Transmita confiança aos seus clientes corporativos com endereços @suaempresa.</p>
+          <div class="offer-price">R$ 9,95<span>/mês</span></div>
+          <ul class="offer-features">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 GB para e-mails</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Aliases e Domínio grátis</li>
+          </ul>
+          <a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" target="_blank" class="btn-offer">Criar E-mail Corporativo</a>
+        </div>
+      </div>
+    </div>
+    <p class="disclaimer">* Valores e condições definidos pela Hostinger, sujeitos a alterações.</p>
+  </div>
+  <!-- End of Affiliate Section -->
 
 </div>
 
