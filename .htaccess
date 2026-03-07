@@ -1,0 +1,17 @@
+RewriteEngine On
+
+# --- URLs Limpas ---
+# 1. Redireciona de /pagina.html para /pagina
+RewriteCond %{THE_REQUEST} /([^.]+)\.html [NC]
+RewriteRule ^ /%1 [L,R=301]
+
+# 2. Serve o arquivo .html internamente se a URL não tiver extensão
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.html -f
+RewriteRule ^(.*)$ $1.html [L]
+
+# 3. Redireciona de /index.html para /
+RewriteCond %{THE_REQUEST} /index\.html [NC]
+RewriteRule ^index\.html$ / [L,R=301]
+
+DirectoryIndex index.html
