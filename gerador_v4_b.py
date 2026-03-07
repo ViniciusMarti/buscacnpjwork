@@ -72,143 +72,287 @@ def norm(data):
     }
 
 
-CSS = """<style>
-
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{--text:#333;--muted:#888;--border:#ebebeb;--bg:#fff;--dark:#1a1a1a}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-       line-height:1.7;color:var(--text);background:var(--bg);font-size:1rem}
-  header{padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;
-         background:rgba(255,255,255,0.97);backdrop-filter:blur(8px);z-index:999}
-  .hi{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:24px}
-  .logo{font-weight:800;font-size:1rem;text-decoration:none;color:var(--dark)}
-  nav{display:flex;gap:22px}nav a{text-decoration:none;color:#555;font-size:.95rem}
-  .c{max-width:800px;margin:0 auto;padding:40px 20px 60px}
-  .bc{font-size:.82rem;color:var(--muted);margin-bottom:24px}
-  .bc a{color:var(--muted);text-decoration:none}.bc span{margin:0 6px}
-  h1{font-size:1.9rem;color:#111;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
-  .cf{font-size:.95rem;color:var(--muted);margin-bottom:20px}
-  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;
-         font-weight:700;letter-spacing:.5px;text-transform:uppercase;
-         margin-bottom:32px;border:1px solid transparent}
-  .ba{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
-  .bb{background:#fef2f2;color:#991b1b;border-color:#fecaca}
-  .bo{background:#fffbeb;color:#92400e;border-color:#fde68a}
-  .s{margin-bottom:36px}
-  h2{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
-     color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:20px}
-  .g{display:grid;grid-template-columns:1fr 1fr;gap:18px 32px}
-  @media(max-width:600px){.g{grid-template-columns:1fr}}
-  .f label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;
-            letter-spacing:.5px;color:var(--muted);margin-bottom:3px}
-  .f p{font-size:.97rem;color:#222}
-  ul.dl{list-style:none}ul.dl li{padding:12px 0;border-bottom:1px solid var(--border);font-size:.95rem}
-  ul.dl li:last-child{border-bottom:none}ul.dl li strong{display:block;color:#111;font-weight:600}
-  ul.dl li span{color:var(--muted);font-size:.85rem}
-  hr{border:none;border-top:1px solid var(--border);margin:32px 0}
-  footer{border-top:1px solid var(--border);padding:32px 20px;text-align:center;
-         color:var(--muted);font-size:.85rem}
-  footer nav{display:flex;justify-content:center;gap:20px;margin-bottom:12px;flex-wrap:wrap}
-  footer a{color:var(--muted);text-decoration:none}footer a:hover{color:var(--dark)}
-  a{color:var(--dark);text-decoration:underline;text-underline-offset:3px;text-decoration-color:#ccc}
-  @media(prefers-color-scheme:dark){
-    :root{--text:#e8e8e8;--muted:#777;--border:#2f2f2f;--bg:#191919;--dark:#f0f0f0}
-    header{background:rgba(25,25,25,0.97)!important}h1{color:#f0f0f0}.f p{color:#c9c9c9}
-    ul.dl li{color:#c9c9c9}ul.dl li strong{color:#f0f0f0}
-    .ba{background:#052e16;color:#86efac;border-color:#166534}
-    .bb{background:#450a0a;color:#fca5a5;border-color:#991b1b}
-    .bo{background:#451a03;color:#fcd34d;border-color:#92400e}
-  }
-</style>"""
-
+# CSS agora é externo (/cnpj.css) — não há mais inline aqui
+CNPJ_HEAD = """\
+  <link rel="stylesheet" href="/cnpj.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">"""
+# SVG icons para os itens das listas
+ICON_CNAE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'
+ICON_SEC     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>'
+ICON_SOCIO   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'
+ICON_PIN     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
+ICON_INFO    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+ICON_COPY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
+ICON_PARTNER = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+ICON_CHECK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
 
 def gerar_html(data):
     d = norm(data)
-    nome   = d["nome_fantasia"] or d["razao_social"]
+    razao  = d["razao_social"]
+    nome   = d["nome_fantasia"] or razao
     cnpj_f = fmt_cnpj(d["cnpj"])
+    cnpj_r = d["cnpj"]  # só dígitos
     sit    = d["situacao"].upper()
+
     if "ATIVA" in sit:
-        bc, bt = "ba", "Ativa"
-    elif any(x in sit for x in ("BAIXADA","INAPTA","CANCELADA")):
-        bc, bt = "bb", d["situacao"].title()
+        badge_cls, badge_txt = "badge-ativa", "Ativa"
+    elif any(x in sit for x in ("BAIXADA", "CANCELADA")):
+        badge_cls, badge_txt = "badge-baixada", d["situacao"].title()
+    elif "INAPTA" in sit:
+        badge_cls, badge_txt = "badge-inapta", d["situacao"].title()
     else:
-        bc, bt = "bo", d["situacao"].title()
+        badge_cls, badge_txt = "badge-suspensa", d["situacao"].title()
 
-    socios = "".join([
-        f'<li><strong>{s.get("nome_socio","—")}</strong>' +
-        f'<span>{s.get("qualificacao_socio","Sócio")}</span></li>'
-        for s in d["qsa"]
-    ]) or "<li><span>Não disponível</span></li>"
+    # ------ Sócios ------
+    socios_html = ""
+    for s in d["qsa"]:
+        nm = s.get("nome_socio", "\u2014")
+        ql = s.get("qualificacao_socio", "S\u00f3cio")
+        socios_html += f"""
+    <li>
+      <div class="li-icon">{ICON_SOCIO}</div>
+      <div class="li-body"><strong>{nm}</strong><span>{ql}</span></div>
+    </li>"""
+    if not socios_html:
+        socios_html = '<li><div class="li-body"><span>N\u00e3o dispon\u00edvel</span></div></li>'
 
-    cnaes = "".join([
-        f'<li><strong>{c.get("descricao","—")}</strong>\n<span>CNAE {c.get("codigo","")}</span></li>'
-        for c in d["cnaes_secundarios"]
-    ]) or "<li><span>—</span></li>"
+    # ------ CNAEs Secundários ------
+    cnaes_html = ""
+    for c in d["cnaes_secundarios"]:
+        desc = c.get("descricao", "\u2014")
+        cod  = c.get("codigo", "")
+        cnaes_html += f"""
+    <li>
+      <div class="li-icon">{ICON_SEC}</div>
+      <div class="li-body"><strong>{desc}</strong><span>CNAE {cod} <span class="tag">Secund\u00e1ria</span></span></div>
+    </li>"""
+    if not cnaes_html:
+        cnaes_html = '<li><div class="li-body"><span>\u2014</span></div></li>'
 
-    cont = ""
-    if d["telefone"] or d["email"]:
-        flds = ""
-        if d["telefone"]: flds += f'<div class="f"><label>Telefone</label><p>{d["telefone"]}</p></div>'
-        if d["email"]:    flds += f'<div class="f"><label>E-mail</label><p>{d["email"]}</p></div>'
-        cont = f'<div class="s"><h2>Contato</h2><div class="g">{flds}</div></div><hr>'
+    # ------ Contato (opcional) ------
+    contact_fields = ""
+    if d["telefone"]:
+        contact_fields += f'<div class="field"><label>Telefone</label><p>{d["telefone"]}</p></div>'
+    if d["email"]:
+        contact_fields += f'<div class="field"><label>E-mail</label><p>{d["email"]}</p></div>'
+    contact_section = f"""
+  <p class="sec-label">Contato</p>
+  <div class="fields">{contact_fields}</div>""" if contact_fields else ""
 
-    title  = f"{nome} — CNPJ {cnpj_f} | BuscaCNPJ.work"
-    desc   = f"Consulta CNPJ {cnpj_f}: {d['razao_social']}. Situação {d['situacao']}, {d['municipio']}/{d['uf']}."
+    # ------ Endereço ------
+    end_comp = f" \u2014 {d['complemento']}" if d["complemento"] else ""
+    end_str  = f"{d['logradouro']}, {d['numero']}{end_comp}"
+
+    title = f"{razao} \u2014 CNPJ {cnpj_f} | BuscaCNPJ.work"
+    desc  = (f"Dados do CNPJ {cnpj_f} \u2014 {razao}. Situa\u00e7\u00e3o: {d['situacao']}. "
+             f"Endere\u00e7o: {end_str}, {d['municipio']} - {d['uf']}. Consulta gratuita da Receita Federal.")
     schema = json.dumps({
-        "@context":"https://schema.org","@type":"Organization",
-        "name":nome,"legalName":d["razao_social"],"taxID":cnpj_f,
-        "address":{"@type":"PostalAddress",
-                   "streetAddress":f"{d['logradouro']}, {d['numero']}",
-                   "addressLocality":d["municipio"],"addressRegion":d["uf"],
-                   "postalCode":d["cep"],"addressCountry":"BR"},
-        "url":f"{DOMAIN}/cnpj/{d['cnpj']}/"
+        "@context": "https://schema.org", "@type": "Organization",
+        "name": nome, "legalName": razao, "taxID": cnpj_f,
+        "foundingDate": d["data_abertura"],
+        "address": {"@type": "PostalAddress",
+                    "streetAddress": end_str,
+                    "addressLocality": d["municipio"],
+                    "addressRegion": d["uf"],
+                    "postalCode": d["cep"], "addressCountry": "BR"},
+        "url": f"{DOMAIN}/cnpj/{cnpj_r}/"
     }, ensure_ascii=False)
 
-    return f"""<!DOCTYPE html><html lang="pt-BR">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest"><meta name="description" content="{desc}">
-<link rel="canonical" href="{DOMAIN}/cnpj/{d['cnpj']}/">
-<script type="application/ld+json">{schema}</script>{CSS}</head>
+<meta name="description" content="{desc}">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<link rel="canonical" href="{DOMAIN}/cnpj/{cnpj_r}/">
+<meta property="og:type"        content="website">
+<meta property="og:title"       content="{razao} \u2014 CNPJ {cnpj_f}">
+<meta property="og:description" content="Dados p\u00fablicos do CNPJ {cnpj_f} \u2014 {razao}. Situa\u00e7\u00e3o {d['situacao']}. Receita Federal.">
+<meta property="og:url"         content="{DOMAIN}/cnpj/{cnpj_r}/">
+<meta property="og:site_name"   content="BuscaCNPJ.work">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<script type="application/ld+json">{schema}</script>
+{CNPJ_HEAD}
+</head>
 <body>
-<header><div class="hi"><a class="logo" href="{DOMAIN}">buscacnpj.work</a>
-<nav><a href="{DOMAIN}">consultar cnpj</a></nav></div></header>
-<div class="c">
-<div class="bc"><a href="{DOMAIN}">início</a><span>/</span>
-<a href="{DOMAIN}/cnpj/">cnpj</a><span>/</span>{cnpj_f}</div>
-<h1>{nome}</h1><p class="cf">CNPJ {cnpj_f}</p><span class="badge {bc}">{bt}</span>
-<div class="s"><h2>Informações de Registro</h2><div class="g">
-<div class="f"><label>Razão Social</label><p>{d["razao_social"]}</p></div>
-<div class="f"><label>Nome Fantasia</label><p>{d["nome_fantasia"] or "—"}</p></div>
-<div class="f"><label>Data de Abertura</label><p>{d["data_abertura"]}</p></div>
-<div class="f"><label>Situação</label><p>{d["situacao"]}</p></div>
-<div class="f"><label>Porte</label><p>{d["porte"]}</p></div>
-<div class="f"><label>Natureza Jurídica</label><p>{d["natureza_juridica"]}</p></div>
-<div class="f"><label>Capital Social</label><p>{d["capital_social"]}</p></div>
-<div class="f"><label>CNPJ</label><p>{cnpj_f}</p></div>
-</div></div><hr>
-<div class="s"><h2>Localização</h2><div class="g">
-<div class="f"><label>Logradouro</label>
-<p>{d["logradouro"]}, {d["numero"]}{(" — "+d["complemento"]) if d["complemento"] else ""}</p></div>
-<div class="f"><label>Bairro</label><p>{d["bairro"]}</p></div>
-<div class="f"><label>Município</label><p>{d["municipio"]} — {d["uf"]}</p></div>
-<div class="f"><label>CEP</label><p>{d["cep"]}</p></div>
-</div></div><hr>
-{cont}
-<div class="s"><h2>Atividade Principal</h2><ul class="dl">
-<li><strong>{d["cnae_principal"]}</strong>
-{('<span>CNAE '+d["cnae_codigo"]+'</span>') if d["cnae_codigo"] else ""}</li></ul></div>
-<div class="s"><h2>Atividades Secundárias</h2><ul class="dl">{cnaes}</ul></div><hr>
-<div class="s"><h2>Quadro de Sócios</h2><ul class="dl">{socios}</ul></div>
+
+<!-- Toast de c\u00f3pia -->
+<div id="copy-toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  <span id="copy-toast-text">Copiado!</span>
 </div>
-<footer><nav><a href="{DOMAIN}/">Início</a><a href="{DOMAIN}/sobre/">Sobre</a>
-<a href="{DOMAIN}/privacidade/">Privacidade</a><a href="{DOMAIN}/contato/">Contato</a></nav>
-<p>© 2026 <a href="{DOMAIN}">BuscaCNPJ.work</a> — Dados públicos da Receita Federal.</p>
-</footer></body></html>"""
+
+<header>
+  <div class="header-inner">
+    <a class="logo" href="/">Busca<span>CNPJ</span>.work</a>
+    <form class="header-search" action="/"
+          onsubmit="var v=this.qs.value.replace(/\\D/g,'');if(v.length===14){{window.location='/cnpj/'+v+'/';return false;}}alert('CNPJ inv\u00e1lido.');return false;">
+      <input type="text" name="qs" maxlength="18" placeholder="Consultar outro CNPJ\u2026"
+             autocomplete="off" inputmode="numeric"
+             oninput="var v=this.value.replace(/\\D/g,'').slice(0,14);
+               if(v.length>12)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8,12)+'-'+v.slice(12);
+               else if(v.length>8)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8);
+               else if(v.length>5)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5);
+               else if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);
+               this.value=v;">
+      <button type="submit">Consultar</button>
+    </form>
+    <nav>
+      <a href="/">In\u00edcio</a>
+      <a href="/sobre/">Sobre</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <nav class="bc" aria-label="Breadcrumb">
+    <a href="/">In\u00edcio</a><span class="bc-sep">\u203a</span>
+    <a href="/">CNPJ</a><span class="bc-sep">\u203a</span>
+    <span>{cnpj_f}</span>
+  </nav>
+
+  <div class="company-hero">
+    <div class="badge {badge_cls}"><span class="badge-dot"></span>{badge_txt}</div>
+    <div class="copy-row-name">
+      <h1 class="company-name">{razao}</h1>
+      <button class="copy-btn" onclick="copyData('{razao}', 'Raz\u00e3o social copiada!', this)" title="Copiar Raz\u00e3o Social">{ICON_COPY} Copiar nome</button>
+    </div>
+    <div class="copy-row">
+      <p class="cnpj-display">CNPJ {cnpj_f}</p>
+      <button class="copy-btn" onclick="copyData('{cnpj_r}', 'CNPJ copiado!', this)" title="Copiar CNPJ">{ICON_COPY} Copiar CNPJ</button>
+      <button class="copy-btn" onclick="copyData('{cnpj_f}', 'CNPJ formatado copiado!', this)" title="Copiar CNPJ formatado">{ICON_COPY} Com pontua\u00e7\u00e3o</button>
+    </div>
+  </div>
+
+  <p class="sec-label">Dados Gerais</p>
+  <div class="fields">
+    <div class="field"><label>Raz\u00e3o Social</label><p>{razao}</p></div>
+    <div class="field"><label>Nome Fantasia</label><p>{d['nome_fantasia'] or '\u2014'}</p></div>
+    <div class="field"><label>CNPJ</label><p>{cnpj_f}</p></div>
+    <div class="field"><label>Situa\u00e7\u00e3o Cadastral</label><p>{d['situacao']}</p></div>
+    <div class="field"><label>Data de Abertura</label><p>{d['data_abertura']}</p></div>
+    <div class="field"><label>Porte</label><p>{d['porte']}</p></div>
+    <div class="field"><label>Natureza Jur\u00eddica</label><p>{d['natureza_juridica']}</p></div>
+    <div class="field"><label>Capital Social</label><p>{d['capital_social']}</p></div>
+    {f'<div class="field"><label>Telefone</label><p>{d["telefone"]}</p></div>' if d['telefone'] else ''}
+    {f'<div class="field"><label>E-mail</label><p>{d["email"]}</p></div>' if d['email'] else ''}
+  </div>
+
+  <p class="sec-label">Endere\u00e7o</p>
+  <div class="addr-card">
+    <div class="addr-icon">{ICON_PIN}</div>
+    <div>
+      <p><strong>{end_str}</strong><br>
+      {d['bairro']}<br>
+      {d['municipio']} / {d['uf']}<br>
+      CEP {d['cep']}</p>
+    </div>
+  </div>
+
+  <p class="sec-label">Atividade Econ\u00f4mica Principal</p>
+  <ul class="clean-list">
+    <li>
+      <div class="li-icon">{ICON_CNAE}</div>
+      <div class="li-body"><strong>{d['cnae_principal']}</strong><span>CNAE {d['cnae_codigo']}</span></div>
+    </li>
+  </ul>
+
+  <p class="sec-label">Atividades Secund\u00e1rias</p>
+  <ul class="clean-list">{cnaes_html}</ul>
+
+  <p class="sec-label">Quadro de S\u00f3cios e Administradores</p>
+  <ul class="clean-list">{socios_html}</ul>
+
+  <div class="fonte">
+    <span class="fonte-icon">{ICON_INFO}</span>
+    <p>Dados p\u00fablicos provenientes da <strong>Receita Federal do Brasil</strong>.
+    Para corre\u00e7\u00f5es, acesse o <a href="https://www.gov.br/receitafederal" target="_blank" rel="noopener">portal da Receita Federal</a>
+    ou <a href="/contato/">entre em contato</a>.</p>
+  </div>
+
+  <div class="affiliate-section">
+    <div class="affiliate-header">
+      <div class="partner-label">{ICON_PARTNER} Recomenda\u00e7\u00e3o de Parceiro</div>
+      <img src="/hostinger_logo.png" alt="Hostinger Brasil" class="partner-logo">
+      <h2>Transforme sua empresa em refer\u00eancia online</h2>
+      <p>Com a <strong>Hostinger</strong>, coloque o site da sua empresa no ar com performance premium e e-mail corporativo.</p>
+    </div>
+    <div class="offers">
+      <div class="offer-card">
+        <div class="offer-image" style="background-image:url('https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=600');"></div>
+        <div class="offer-content">
+          <span class="offer-badge">Hospedagem de Sites</span>
+          <h3 class="offer-title">Business Web Hosting</h3>
+          <p class="offer-desc">Pot\u00eancia e recursos avan\u00e7ados, ideal para empresas que buscam alta velocidade.</p>
+          <div class="offer-price">R$ 19,99<span>/m\u00eas</span></div>
+          <ul class="offer-features">
+            <li>{ICON_CHECK} At\u00e9 50 websites na mesma conta</li>
+            <li>{ICON_CHECK} 50 GB de Armazenamento NVMe</li>
+            <li>{ICON_CHECK} Performance ultra-r\u00e1pida</li>
+          </ul>
+          <a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" target="_blank" rel="noopener sponsored" class="btn-offer">Ver o Plano Business</a>
+        </div>
+      </div>
+      <div class="offer-card">
+        <div class="offer-image" style="background-image:url('https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=600');"></div>
+        <div class="offer-content">
+          <span class="offer-badge">E-mail Profissional</span>
+          <h3 class="offer-title">Premium Business Email</h3>
+          <p class="offer-desc">Transmita credibilidade aos seus clientes com endere\u00e7os @suaempresa.</p>
+          <div class="offer-price">R$ 9,95<span>/m\u00eas</span></div>
+          <ul class="offer-features">
+            <li>{ICON_CHECK} 50 GB de armazenamento</li>
+            <li>{ICON_CHECK} 50 regras de encaminhamento</li>
+            <li>{ICON_CHECK} Dom\u00ednio gr\u00e1tis incluso</li>
+          </ul>
+          <a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" target="_blank" rel="noopener sponsored" class="btn-offer">Criar E-mail Corporativo</a>
+        </div>
+      </div>
+    </div>
+    <p class="disclaimer">* Valores definidos pela Hostinger e sujeitos a altera\u00e7\u00f5es.</p>
+  </div>
+
+</div>
+
+<footer>
+  <nav class="fn">
+    <a href="/">In\u00edcio</a>
+    <a href="/sobre/">Sobre</a>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/contato/">Contato</a>
+  </nav>
+  <p>\u00a9 2026 <a href="/">BuscaCNPJ.work</a> \u2014 Dados p\u00fablicos da Receita Federal do Brasil.</p>
+</footer>
+
+<script>
+function copyData(text, message, btn) {{
+  navigator.clipboard.writeText(text).then(function() {{
+    var orig = btn.innerHTML;
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"></polyline></svg> Copiado!';
+    setTimeout(function() {{ btn.classList.remove('copied'); btn.innerHTML = orig; }}, 2000);
+    var toast = document.getElementById('copy-toast');
+    document.getElementById('copy-toast-text').textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function() {{ toast.classList.remove('show'); }}, 2500);
+  }}).catch(function() {{
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+  }});
+}}
+</script>
+</body>
+</html>"""
 
 
 def gerar_index(index_links, total):
@@ -224,7 +368,7 @@ def gerar_index(index_links, total):
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>BuscaCNPJ.work — Consulta Gratuita de CNPJ</title>
 <meta name="description" content="Consulte dados públicos de qualquer empresa pelo CNPJ. Gratuito.">
-<link rel="canonical" href="{DOMAIN}/">{CSS}</head>
+<link rel="canonical" href="{DOMAIN}/"></head>
 <body>
 <header><div class="hi"><a class="logo" href="{DOMAIN}">buscacnpj.work</a>
 <nav><a href="{DOMAIN}/sobre/">sobre</a></nav></div></header>

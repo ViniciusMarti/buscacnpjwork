@@ -15,3 +15,11 @@ RewriteCond %{THE_REQUEST} /index\.html [NC]
 RewriteRule ^index\.html$ / [L,R=301]
 
 DirectoryIndex index.html
+
+# --- Cache de assets estáticos ---
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|woff2|woff|ttf)$">
+    Header set Cache-Control "public, max-age=2592000, immutable"
+  </FilesMatch>
+</IfModule>
+
