@@ -80,7 +80,8 @@ ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 def gerar_html(data):
     d = norm(data)
     razao = d["razao_social"]
-    nome = (d["nome_fantasia"] or razao).upper()
+    nome = razao.upper() # O H1 e Título agora serão a Razão Social
+    nome_fantasia = (d["nome_fantasia"] or "").upper()
     cnpj_f = fmt_cnpj(d["cnpj"])
     cnpj_r = d["cnpj"]
     
@@ -120,6 +121,7 @@ def gerar_html(data):
     <div class="company-hero">
         <div class="badge {badge_cls}">{badge_txt}</div>
         <h1 class="company-title">{nome}</h1>
+        {f'<p style="color:var(--text-muted); font-size: 0.9rem; margin-top:-10px; margin-bottom:10px;">{nome_fantasia}</p>' if nome_fantasia and nome_fantasia != nome else ''}
         <p style="color:var(--text-muted); font-weight:600; margin-bottom: 20px;">CNPJ {cnpj_f}</p>
         <div class="copy-group">
             <button class="btn-copy" onclick="copyText('{razao}', this)">{ICON_COPY} Copiar Nome</button>

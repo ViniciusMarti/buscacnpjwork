@@ -87,7 +87,8 @@ def parse_html(html, cnpj_digits):
 
 def gerar_html_premium(d):
     razao = d["razao_social"]
-    nome = (d["nome_fantasia"] or razao).upper()
+    nome = razao.upper() # H1 agora é Razão Social
+    nome_fantasia = (d["nome_fantasia"] or "").upper()
     cnpj_f = fmt_cnpj(d["cnpj"])
     cnpj_r = d["cnpj"]
     sit = d["situacao"].upper()
@@ -109,6 +110,7 @@ def gerar_html_premium(d):
     <div class="company-hero">
         <div class="badge {b_cls}">{d['situacao']}</div>
         <h1 class="company-title">{nome}</h1>
+        {f'<p style="color:var(--text-muted); font-size: 0.9rem; margin-top:-10px; margin-bottom:10px;">{nome_fantasia}</p>' if nome_fantasia and nome_fantasia != nome else ''}
         <p style="color:var(--text-muted); font-weight:600; margin-bottom: 20px;">CNPJ {cnpj_f}</p>
         <div class="copy-group">
             <button class="btn-copy" onclick="copyText('{razao}', this)">Copiar Nome</button>
@@ -171,8 +173,14 @@ def audit(folder: Path):
     if not path.exists(): return cnpj, "FALTA"
     try:
         html = path.read_text(encoding="utf-8", errors="replace")
-        # Se já tiver v=1.3 e o design novo, pula
-        if f'v={VERSION}' in html and 'class="info-grid"' in html: return cnpj, "OK"
+        if f'v={VERSION}' in html and '<h1 class="company-title">' in html and 'cnpj.css' in html:
+            # Check if H1 matches expected Razao Social (simple check)
+            d_temp = parse_html(html, cnpj)
+            if d_temp["razao_social"].upper() in html:
+                # If already v1.3 and H1 looks okay, but we want to force the new style with Nome Fantasia below H1
+                # To be fast, let's only re-run if version is lower or if we explicitly want to update
+                if f'v={VERSION}' in html and f'margin-top:-10px' in html:
+                    return cnpj, "OK"
         
         d = parse_html(html, cnpj)
         if d["razao_social"] == "N/A": 
