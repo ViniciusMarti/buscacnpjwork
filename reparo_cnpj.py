@@ -16,7 +16,7 @@ CNPJ_DIR    = Path("./cnpj")
 MAX_WORKERS = 60
 LOG_FILE    = "auditoria.log"
 DOMAIN      = "https://buscacnpj.work"
-VERSION     = "1.3"
+VERSION     = "1.4"
 # ────────────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -173,14 +173,8 @@ def audit(folder: Path):
     if not path.exists(): return cnpj, "FALTA"
     try:
         html = path.read_text(encoding="utf-8", errors="replace")
-        if f'v={VERSION}' in html and '<h1 class="company-title">' in html and 'cnpj.css' in html:
-            # Check if H1 matches expected Razao Social (simple check)
-            d_temp = parse_html(html, cnpj)
-            if d_temp["razao_social"].upper() in html:
-                # If already v1.3 and H1 looks okay, but we want to force the new style with Nome Fantasia below H1
-                # To be fast, let's only re-run if version is lower or if we explicitly want to update
-                if f'v={VERSION}' in html and f'margin-top:-10px' in html:
-                    return cnpj, "OK"
+        if f'v={VERSION}' in html and 'margin-top:-10px' in html:
+            return cnpj, "OK"
         
         d = parse_html(html, cnpj)
         if d["razao_social"] == "N/A": 

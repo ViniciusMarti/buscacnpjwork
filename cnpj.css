@@ -206,6 +206,45 @@ nav a:hover { color: var(--primary); }
 }
 .btn-cta:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 
+/* ── Cambly Hybrid Banner ── */
+.cambly-banner-card {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px;
+    background: #ffffff; border-radius: 24px; overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1); align-items: stretch;
+    text-align: left; margin-top: 20px;
+}
+.cambly-content { padding: 40px 50px; }
+.cambly-logo { height: 26px; margin-bottom: 20px; display: block; }
+.cambly-title { 
+    font-family: 'Outfit', sans-serif; font-size: 2.2rem !important; 
+    font-weight: 800; line-height: 1.1; color: #1a1a1a !important; 
+    margin-bottom: 16px !important; 
+}
+.cambly-text { font-size: 1rem; color: #4a4a4a; margin-bottom: 24px; line-height: 1.5; }
+.cambly-price-row { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+.cambly-price { font-size: 1.8rem; font-weight: 900; color: #1a1a1a; }
+.cambly-price span { font-size: 0.8rem; opacity: 0.6; }
+.cambly-badge { 
+    background: #ff4757; color: white; padding: 4px 10px; 
+    border-radius: 6px; font-size: 0.7rem; font-weight: 700; 
+    text-transform: uppercase; 
+}
+.cambly-cta { 
+    display: inline-block; background: #FFCB3C; color: #1a1a1a; 
+    padding: 14px 28px; border-radius: 50px; font-weight: 800; 
+    font-size: 1rem; text-decoration: none; transition: all 0.3s;
+    box-shadow: 0 8px 16px rgba(255, 203, 60, 0.3);
+}
+.cambly-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(255, 203, 60, 0.4); }
+.cambly-image-side { min-height: 350px; background-size: cover; background-position: center; }
+
+@media (max-width: 900px) {
+    .cambly-banner-card { grid-template-columns: 1fr; }
+    .cambly-image-side { order: -1; min-height: 250px; }
+    .cambly-content { padding: 30px; text-align: center; }
+    .cambly-logo { margin: 0 auto 20px; }
+}
+
 /* ── Footer ── */
 footer { padding: 80px 20px; border-top: 1px solid var(--border); text-align: center; }
 footer nav { justify-content: center; margin-bottom: 2rem; }

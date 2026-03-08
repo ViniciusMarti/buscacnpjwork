@@ -18,6 +18,7 @@ SLEEP         = 0.2
 SAVE_EVERY    = 50
 API_BRASIL    = "https://brasilapi.com.br/api/cnpj/v1/"
 API_MINHA_REC = "https://minhareceita.org/"
+VERSION       = "1.4"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,8 +72,8 @@ def norm(data):
     }
 
 # Assets & Icons
-CNPJ_HEAD = """\
-<link rel="stylesheet" href="../../cnpj.css?v=1.2">
+CNPJ_HEAD = f"""\
+<link rel="stylesheet" href="../../cnpj.css?v={VERSION}">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">"""
 
 ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
@@ -208,7 +209,7 @@ def gerar_index(index_links, total):
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>BuscaCNPJ.work — Consulta Gratuita de CNPJ</title>
-    <link rel="stylesheet" href="cnpj.css?v=1.2">
+    <link rel="stylesheet" href="cnpj.css?v={VERSION}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
