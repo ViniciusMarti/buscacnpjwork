@@ -160,8 +160,21 @@ function format_money($val) {
         .ranking-table .name { font-weight: 700; color: var(--text); text-decoration: none; display: block; }
         .ranking-table .name:hover { color: var(--primary); }
         .ranking-table .cnpj { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
+
+        /* Grid de Cidades e Cards */
+        .grid-states { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 24px 0 40px; }
+        .state-card { background: white; padding: 20px 24px; border-radius: 16px; border: 1px solid var(--border); text-decoration: none; color: var(--text); transition: 0.3s; display: flex; align-items: center; justify-content: space-between; }
+        .state-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: var(--shadow-md); color: var(--primary); }
+        .state-card span { font-weight: 700; font-size: 1.1rem; }
+        .state-card .arrow { font-size: 1.2rem; opacity: 0.3; }
+        .state-card:hover .arrow { opacity: 1; }
         
-        @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { 
+            .stats-grid { grid-template-columns: 1fr; } 
+            h1 { font-size: 2.2rem !important; }
+            .ranking-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .ranking-table { min-width: 600px; }
+        }
     </style>
 </head>
 <body class="ranking-page">
@@ -176,8 +189,8 @@ function format_money($val) {
 <div class="page-wrap fade-up">
     <div class="bc"><a href="/">Início</a> > <a href="/rankings/">Rankings</a> > <?php echo $state_name; ?></div>
     
-    <header style="padding: 40px 0 20px; text-align: left; border:none; background:none;">
-        <h1 style="font-size: 3rem; margin-bottom:10px;">Maiores Empresas em <?php echo $state_name; ?></h1>
+    <header style="padding: 40px 0 20px; text-align: left; border:none; background:none; position: relative; z-index: 1;">
+        <h1 style="font-size: clamp(2rem, 8vw, 3rem); margin-bottom:10px; line-height: 1.1;">Maiores Empresas em <?php echo $state_name; ?></h1>
         <p style="font-weight:700; color:var(--primary); font-size:1.1rem; margin-bottom:12px;">Ranking por Capital Social • Top 100 do estado</p>
         <p style="color:var(--text-muted); max-width:800px;">Ranking estadual com empresas matriz (CNPJ raiz único). Veja os indicadores em <?php echo $state_name; ?> e a lista das 100 maiores empresas.</p>
     </header>
