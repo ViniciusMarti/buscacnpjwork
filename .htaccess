@@ -1,5 +1,12 @@
 RewriteEngine On
 
+# --- SEGURANÇA MÁXIMA PARA DADOS ---
+# Impede que curiosos baixem o banco de dados dados.db pelo navegador
+<FilesMatch "\.(db|sqlite|sql)$">
+    Require all denied
+    Order allow,deny
+    Deny from all
+</FilesMatch>
 # --- Roteamento Dinâmico para CNPJs ---
 # Redireciona /cnpj/12345678901234/ para cnpj.php?cnpj=12345678901234
 # Somente se a pasta física não existir (fase de transição tranquila)
