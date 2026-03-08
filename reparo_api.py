@@ -14,12 +14,12 @@ from pathlib import Path
 BASE_DIR      = "."
 CNPJ_DIR      = Path("./cnpj")
 LOG_FILE      = "reparo_api.log"
-MAX_WORKERS   = 20 # Mantendo equilibrado para não exceder limites bruscamente
+MAX_WORKERS   = 5 # Mais lento para garantir captura integral e evitar bloqueios
 API_OPENCNPJ  = "https://api.opencnpj.org/"
 API_BRASIL    = "https://brasilapi.com.br/api/cnpj/v1/"
 API_MINHA_REC = "https://minhareceita.org/"
 DOMAIN        = "https://buscacnpj.work"
-VERSION       = "1.7" # Versão atual fixada
+VERSION       = "1.7.1" # Versão atualizada
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,84 +51,142 @@ def fmt_date(d):
         return d or "—"
 
 def norm(data):
+    if not data: return {}
     cnpj = "".join(x for x in str(data.get("cnpj","")) if x.isdigit())
     
-    # Mapeamentos flexíveis para diferentes APIs
-    situacao = (data.get("descricao_situacao_cadastral") or 
-                data.get("descrição_situação_cadastral") or 
-                data.get("situacao_cadastral") or "N/A")
+    # Situação
+    sit_r = (data.get("descricao_situacao_cadastral") or 
+             data.get("descrição_situação_cadastral") or 
+             data.get("situacao_cadastral") or 
+             data.get("situacao") or "N/A")
+    situacao = str(sit_r).upper()
     
     data_abertura = fmt_date(data.get("data_inicio_atividade") or data.get("data_abertura") or "")
+    porte = str(data.get("porte") or data.get("porte_empresa") or "—").upper()
     
-    porte = data.get("porte") or data.get("porte_empresa") or "—"
-    
-    # Telefone: OpenCNPJ tem lista, outros tem campo fixo
+    # Contato
     tel = data.get("ddd_telefone_1") or ""
     if not tel and data.get("telefones") and isinstance(data["telefones"], list) and len(data["telefones"]) > 0:
         t = data["telefones"][0]
         if isinstance(t, dict):
             tel = f"({t.get('ddd','')}) {t.get('numero','')}".replace("None", "").strip()
             if tel == "()": tel = ""
-    
+    elif not tel and data.get("telefone"): 
+        tel = str(data.get("telefone"))
+
     # QSA
-    socios = data.get("qsa") or data.get("QSA") or []
+    socios_raw = data.get("qsa") or data.get("quadro_societario") or data.get("socios") or []
+    socios_clean = []
+    if not isinstance(socios_raw, list): socios_raw = []
+    for s in socios_raw:
+        if isinstance(s, dict):
+            nome = str(s.get("nome_socio") or s.get("nome") or "—").upper()
+            
+            # Tenta pegar código e descrição da qualificação
+            q_cod = str(s.get("codigo_qualificacao_socio") or s.get("cod_qualificacao") or "")
+            q_desc = str(s.get("qualificacao_socio") or s.get("qualificacao") or s.get("cargo") or "Sócio")
+            
+            if q_cod and q_cod not in q_desc:
+                cargo = f"{q_cod} - {q_desc}"
+            else:
+                cargo = q_desc
+            
+            socios_clean.append({"nome": nome, "cargo": cargo})
+        else:
+            socios_clean.append({"nome": str(s).upper(), "cargo": "Sócio"})
+
+    # Atividade Principal
+    cnae_desc = (data.get("cnae_fiscal_descricao") or data.get("cnae_fiscal_descrição") or 
+                 data.get("cnae_principal_descricao") or data.get("cnae_principal_desc") or "")
     
-    # CNAE Principal
-    cnae_desc = (data.get("cnae_fiscal_descricao") or 
-                 data.get("cnae_fiscal_descrição") or 
-                 data.get("cnae_principal_descricao") or 
-                 data.get("cnae_principal") or "—") # OpenCNPJ só manda código as vezes
+    cf = data.get("cnae_fiscal") or data.get("cnae_principal") or data.get("estabelecimento", {}).get("atividade_principal")
+    if not cf and data.get("atividade_principal") and isinstance(data["atividade_principal"], list):
+        cf = data["atividade_principal"][0]
+
+    if isinstance(cf, dict):
+        cnae_cod = str(cf.get("codigo") or cf.get("id") or "")
+        if not cnae_desc: cnae_desc = cf.get("descricao") or cf.get("text") or ""
+    else:
+        cnae_cod = str(cf or "")
     
-    cnae_cod = str(data.get("cnae_fiscal") or data.get("cnae_principal") or "")
+    if not cnae_desc or cnae_desc == cnae_cod:
+        cnae_desc = "Atividade principal" if cnae_cod else "—"
+
+    # Atividades Secundárias
+    cnaes_sec_raw = data.get("cnaes_secundarios") or data.get("atividades_secundarias") or []
+    cnaes_sec_clean = []
+    if not isinstance(cnaes_sec_raw, list): cnaes_sec_raw = []
+    for c in cnaes_sec_raw:
+        if isinstance(c, dict):
+            cod = str(c.get("codigo") or c.get("id") or "")
+            txt = str(c.get("descricao") or c.get("text") or "Atividade secundária")
+            cnaes_sec_clean.append({"codigo": cod, "descricao": txt})
+        else:
+            cnaes_sec_clean.append({"codigo": str(c), "descricao": "Atividade secundária"})
 
     return {
         "cnpj":             cnpj,
-        "razao_social":     data.get("razao_social") or data.get("razão_social") or "N/A",
-        "nome_fantasia":    data.get("nome_fantasia") or data.get("nome_comercial") or "",
+        "razao_social":     str(data.get("razao_social") or data.get("razão_social") or data.get("nome") or "N/A").upper(),
+        "nome_fantasia":    str(data.get("nome_fantasia") or data.get("nome_comercial") or data.get("fantasia") or "").upper(),
         "situacao":         situacao,
         "data_abertura":    data_abertura,
         "porte":            porte,
-        "natureza_juridica":data.get("natureza_juridica") or "—",
+        "natureza_juridica":str(data.get("natureza_juridica") or "—"),
         "capital_social":   fmt_brl(data.get("capital_social", 0)),
-        "email":            data.get("email") or "",
+        "email":            str(data.get("email") or "").lower(),
         "telefone":         tel,
-        "logradouro":       data.get("logradouro") or "—",
-        "numero":           data.get("numero") or "S/N",
-        "complemento":      data.get("complemento") or "",
-        "bairro":           data.get("bairro") or "—",
-        "municipio":        data.get("municipio") or data.get("município") or "—",
-        "uf":               data.get("uf") or "—",
-        "cep":              data.get("cep") or "—",
-        "cnae_principal":   cnae_desc,
-        "cnae_codigo":      cnae_cod,
-        "cnaes_secundarios":data.get("cnaes_secundarios",[]),
-        "qsa":              socios,
+        "logradouro":       str(data.get("logradouro") or "—").upper(),
+        "numero":           str(data.get("numero") or "S/N"),
+        "complemento":      str(data.get("complemento") or "").upper(),
+        "bairro":           str(data.get("bairro") or "—").upper(),
+        "municipio":        str(data.get("municipio") or data.get("município") or "—").upper(),
+        "uf":               str(data.get("uf") or "—").upper(),
+        "cep":              str(data.get("cep") or "—"),
+        "cnae_principal":   str(cnae_desc),
+        "cnae_codigo":      str(cnae_cod),
+        "cnaes_secundarios":cnaes_sec_clean,
+        "qsa":              socios_clean,
     }
 
 ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
 
 def gerar_html_v1_7(data):
     d = norm(data)
-    razao = d["razao_social"]
+    if not d: return ""
+    razao = d.get("razao_social", "N/A")
     nome = razao.upper()
-    nome_fantasia = (d["nome_fantasia"] or "").upper()
-    cnpj_f = fmt_cnpj(d["cnpj"])
-    cnpj_r = d["cnpj"]
+    nome_fantasia = d.get("nome_fantasia", "").upper()
+    cnpj_f = fmt_cnpj(d.get("cnpj", "00000000000000"))
+    cnpj_r = d.get("cnpj", "")
     
-    sit = d["situacao"].upper()
+    sit = d.get("situacao", "").upper()
     badge_cls = "ba" if "ATIVA" in sit else "bb" if any(x in sit for x in ("BAIXADA", "INAPTA")) else "bo"
     
     # Sócios & CNAEs
-    socios = d.get("qsa")
-    if not isinstance(socios, list): socios = []
-    socios_html = "".join([f'<li><strong>{s.get("nome_socio","—") if isinstance(s, dict) else s}</strong><span>{s.get("qualificacao_socio","Sócio") if isinstance(s, dict) else "Sócio"}</span></li>' for s in socios]) or "<li><span>Informação não disponível</span></li>"
+    socios_html = "".join([f'<li><strong>{s["nome"]}</strong><span>{s["cargo"]}</span></li>' for s in d.get("qsa", [])]) or "<li><span>Informação não disponível</span></li>"
     
-    cnaes = d.get("cnaes_secundarios")
-    if not isinstance(cnaes, list): cnaes = []
-    cnaes_sec = "".join([f'<li><strong>{c.get("descricao","—") if isinstance(c, dict) else c}</strong><span>CNAE {c.get("codigo","") if isinstance(c, dict) else ""}</span></li>' for c in cnaes]) or "<li><span>—</span></li>"
+    cnaes_sec_list = []
+    for c in d.get("cnaes_secundarios", []):
+        desc = c.get("descricao", "")
+        cod = c.get("codigo", "")
+        if desc and desc != cod and not desc.isdigit() and "secundária" not in desc.lower():
+            cnaes_sec_list.append(f'<li><strong>{desc}</strong><span>CNAE {cod}</span></li>')
+        elif cod:
+            cnaes_sec_list.append(f'<li><strong>CNAE {cod}</strong></li>')
+    cnaes_sec = "".join(cnaes_sec_list) or "<li><span>—</span></li>"
+    
+    # Atividade Principal
+    cp_desc = d.get("cnae_principal", "")
+    cp_cod = d.get("cnae_codigo", "")
+    if cp_desc and cp_desc != cp_cod and not cp_desc.isdigit() and "principal" not in cp_desc.lower():
+        cnae_main_display = f"{cp_desc} (CNAE {cp_cod})"
+    elif cp_cod:
+        cnae_main_display = f"CNAE {cp_cod}"
+    else:
+        cnae_main_display = "—"
 
     title = f"{nome} — CNPJ {cnpj_f} | BuscaCNPJ.work"
-    desc = f"Dados do CNPJ {cnpj_f}: {razao}. Situação {d['situacao']}."
+    desc = f"Dados do CNPJ {cnpj_f}: {razao}. Situação {sit}."
     schema = json.dumps({"@context":"https://schema.org","@type":"Organization","name":nome,"taxID":cnpj_f}, ensure_ascii=False)
     
     return f"""<!DOCTYPE html><html lang="pt-BR">
@@ -146,7 +204,7 @@ def gerar_html_v1_7(data):
 <div class="page-wrap fade-up">
     <div class="bc"><a href="/">Início</a> / <a href="/cnpj/">CNPJ</a> / {cnpj_f}</div>
     <div class="company-hero">
-        <div class="badge {badge_cls}">{d['situacao']}</div>
+        <div class="badge {badge_cls}">{d.get('situacao', 'N/A')}</div>
         <h1 class="company-title">{nome}</h1>
         {f'<p style="color:var(--text-muted); font-size: 0.9rem; margin-top:-10px; margin-bottom:10px;">{nome_fantasia}</p>' if nome_fantasia and nome_fantasia != nome else ''}
         <p style="color:var(--text-muted); font-weight:600; margin-bottom: 20px;">CNPJ {cnpj_f}</p>
@@ -159,7 +217,7 @@ def gerar_html_v1_7(data):
     <h2 class="sec-title">Dados de Registro</h2>
     <div class="info-grid">
         <div class="info-box"><label>Razão Social</label><p>{razao}</p></div>
-        <div class="info-box"><label>Nome Fantasia</label><p>{d['nome_fantasia'] or '—'}</p></div>
+        <div class="info-box"><label>Nome Fantasia</label><p>{d.get('nome_fantasia') or '—'}</p></div>
         <div class="info-box"><label>Data de Abertura</label><p>{d['data_abertura']}</p></div>
         <div class="info-box"><label>Situação</label><p>{d['situacao']}</p></div>
         <div class="info-box"><label>Porte</label><p>{d['porte']}</p></div>
@@ -174,7 +232,7 @@ def gerar_html_v1_7(data):
         <div class="info-box"><label>Email</label><p>{d['email'] or '—'}</p></div>
     </div>
     <h2 class="sec-title">Atividades Econômicas</h2>
-    <div class="info-box" style="margin-bottom:24px;"><label>Atividade Principal</label><p>{d['cnae_principal']} (CNAE {d['cnae_codigo']})</p></div>
+    <div class="info-box" style="margin-bottom:24px;"><label>Atividade Principal</label><p>{cnae_main_display}</p></div>
     <div class="info-box"><label>Atividades Secundárias</label><ul style="list-style:none; padding-top:10px;">{cnaes_sec}</ul></div>
     <h2 class="sec-title">Quadro Societário</h2>
     <div class="info-box"><ul style="list-style:none; padding-top:10px;">{socios_html}</ul></div>
@@ -211,33 +269,48 @@ function copyText(txt, btn) {{
 </body></html>"""
 
 def fetch(cnpj):
-    # Tenta OpenCNPJ primeiro conforme pedido, depois as outras
+    # Inverte ordem: BrasilAPI e MinhaReceita são mais estáveis para dados completos
     urls = [
-        f"{API_OPENCNPJ}{cnpj}",
-        f"{API_BRASIL}{cnpj}", 
-        f"{API_MINHA_REC}{cnpj}"
+        ("BrasilAPI", f"{API_BRASIL}{cnpj}"), 
+        ("MinhaReceita", f"{API_MINHA_REC}{cnpj}"),
+        ("OpenCNPJ", f"{API_OPENCNPJ}{cnpj}")
     ]
-    for url in urls:
+    for name, url in urls:
         try:
-            r = requests.get(url, timeout=10, headers={"User-Agent":"BuscaCNPJ-Repair/1.7"})
+            r = requests.get(url, timeout=15, headers={"User-Agent":"BuscaCNPJ-Repair/1.7.1"})
             if r.status_code == 200: 
                 data = r.json()
-                if len(data.keys()) > 5:
-                    return data
+                # Verifica integridade mínima: Razão Social e pelo menos 10 campos
+                if data.get("razao_social") or data.get("nome"):
+                    if len(data.keys()) > 10:
+                        log.info("CNPJ %s capturado via %s", cnpj, name)
+                        return data
             if r.status_code == 429: 
-                log.warning("Rate limit atingido em %s. Dormindo 1s...", url)
-                time.sleep(1)
-        except: pass
+                log.warning("Rate limit em %s. Aguardando 2s...", name)
+                time.sleep(2)
+        except Exception as e:
+            pass
+        time.sleep(0.5) # Pequeno intervalo entre APIs para não sobrecarregar
     return None
 
 def check_needs_repair(html):
+    # Valores suspeitos que indicam falha na captura anterior
+    suspicious = [
+        '<p>09/06/1994</p>',
+        '<p>R$ 0,00</p>',
+        'Informação não disponível'
+    ]
+    if any(x in html for x in suspicious):
+        return True
+
     # Conta ocorrências de <p>—</p>
     placeholders = len(re.findall(r'<p>—</p>', html))
     # Campos críticos que não devem ser —
     missing_critical = any(x in html for x in [
         '<label>Porte</label><p>—</p>',
         '<label>Data de Abertura</label><p>—</p>',
-        '<label>Endereço</label><p>—, S/N </p>'
+        '<label>Endereço</label><p>—, S/N </p>',
+        '— (CNAE —)'
     ])
     return placeholders >= 3 or missing_critical
 
