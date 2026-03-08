@@ -241,22 +241,7 @@ function format_money($val) {
         </div>
     </div>
 
-    <h2 class="sec-title">🏙️ Maiores Cidades em <?php echo $state_name; ?></h2>
-    <p style="margin-top: -10px; margin-bottom: 20px; color: var(--text-muted);">Ranking das 10 cidades com maior concentração de empresas no estado.</p>
-    <div class="grid-states" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
-        <?php foreach($top_cities_list as $city): 
-            $city_slug = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $city['municipio'])));
-            $city_slug = preg_replace('/[^a-z0-9-]/', '', $city_slug);
-        ?>
-        <a href="/rankings/estado/<?php echo $slug; ?>/<?php echo $city_slug; ?>/" class="state-card">
-            <div>
-                <span><?php echo titleCase($city['municipio']); ?></span>
-                <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 500;"><?php echo number_format($city['total'], 0, ',', '.'); ?> empresas</div>
-            </div>
-            <span class="arrow">→</span>
-        </a>
-        <?php endforeach; ?>
-    </div>
+
 
     <form class="filter-bar" method="GET">
         <div class="filter-group">
@@ -313,6 +298,23 @@ function format_money($val) {
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <h2 class="sec-title" style="margin-top: 60px;">🏙️ Maiores Cidades em <?php echo $state_name; ?></h2>
+    <p style="margin-top: -10px; margin-bottom: 20px; color: var(--text-muted);">Ranking das 10 cidades com maior concentração de empresas no estado.</p>
+    <div class="grid-states" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+        <?php foreach($top_cities_list as $city): 
+            $city_slug = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $city['municipio'])));
+            $city_slug = preg_replace('/[^a-z0-9-]/', '', $city_slug);
+        ?>
+        <a href="/rankings/estado/<?php echo $slug; ?>/<?php echo $city_slug; ?>/" class="state-card">
+            <div>
+                <span><?php echo titleCase($city['municipio']); ?></span>
+                <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 500;"><?php echo number_format($city['total'], 0, ',', '.'); ?> empresas</div>
+            </div>
+            <span class="arrow">→</span>
+        </a>
+        <?php endforeach; ?>
     </div>
 
 </div>
