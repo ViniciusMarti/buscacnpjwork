@@ -1,217 +1,208 @@
 #!/usr/bin/env python3
 """
 reparo_cnpj.py — BuscaCNPJ.work
-Auditoria completa e reparo das 50k páginas de CNPJ.
-Auto-contido: não depende de patch_layout.py.
-Garante o link relativo ../../cnpj.css?v=1.1
+Versão DEFINITIVA — 2026-03-07
+Garante a extração de dados (mesmo com divergência de encoding/dash) e o design v1.3.
 """
 
 import os
 import re
-import json
 import logging
-import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ── Config ──────────────────────────────────────────────────
 CNPJ_DIR    = Path("./cnpj")
-MAX_WORKERS = 10
+MAX_WORKERS = 60
 LOG_FILE    = "auditoria.log"
 DOMAIN      = "https://buscacnpj.work"
+VERSION     = "1.3"
 # ────────────────────────────────────────────────────────────
-
-# Recriando ícones e head para o reparo ser autossuficiente
-CNPJ_HEAD = """\
-  <link rel="stylesheet" href="../../cnpj.css?v=1.1">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">"""
-
-ICON_CNAE    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'
-ICON_SEC     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>'
-ICON_SOCIO   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'
-ICON_PIN     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
-ICON_INFO    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
-ICON_COPY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
-ICON_PARTNER = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
-ICON_CHECK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(), logging.FileHandler(LOG_FILE, encoding="utf-8")]
 )
-log = logging.getLogger("reparo")
+log = logging.getLogger(__name__)
 
 def fmt_cnpj(c):
+    c = c.zfill(14)
     return f"{c[:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:]}"
 
-def _get(html, label):
-    m = re.search(rf'<label>{re.escape(label)}</label>\s*<p>(.*?)</p>', html, re.DOTALL | re.IGNORECASE)
-    return m.group(1).strip() if m else ""
+def _extract(html, label):
+    # Tenta padrão <label>X</label><p>Y</p>
+    patterns = [
+        rf'<(?:label|span|div)[^>]*>{re.escape(label)}</(?:label|span|div)>\s*<p>(.*?)</p>',
+        rf'<div[^>]*class=["\']label["\'][^>]*>{re.escape(label)}</div>\s*<div[^>]*class=["\']value["\'][^>]*>(.*?)</div>',
+        rf'<b>{re.escape(label)}:?</b>\s*(.*?)<br>'
+    ]
+    for p in patterns:
+        m = re.search(p, html, re.I | re.S)
+        if m: return m.group(1).strip()
+    return ""
 
 def parse_html(html, cnpj_digits):
-    razao    = _get(html, "Razão Social") or _get(html, "Raz\u00e3o Social") or "N/A"
-    fantasia = _get(html, "Nome Fantasia")
-    situacao = _get(html, "Situação Cadastral") or _get(html, "Situação") or "N/A"
-    abertura = _get(html, "Data de Abertura")
-    porte    = _get(html, "Porte") or "—"
-    nat_jur  = _get(html, "Natureza Jurídica") or "—"
-    capital  = _get(html, "Capital Social") or "—"
-    telefone = _get(html, "Telefone")
-    email    = _get(html, "E-mail")
+    # Razão Social com fallbacks robustos
+    razao = _extract(html, "Razão Social") or _extract(html, "Raz\u00e3o Social")
+    if not razao:
+        m_title = re.search(r'<title>(.*?)\s+[-—–|]\s+CNPJ', html, re.I)
+        if not m_title:
+             m_title = re.search(r'<title>(.*?)\s+[-—–|]', html, re.I)
+        razao = m_title.group(1).strip() if m_title else "N/A"
 
-    # Endereço
-    m_addr = re.search(r'<div class="addr-card">.*?<strong>(.*?)</strong><br>\s*(.*?)\s*<br>\s*(.*?)\s*/\s*(.*?)\s*<br>\s*CEP (.*?)</p>', html, re.DOTALL)
-    if m_addr:
-        logr_raw = m_addr.group(1).strip()
-        bairro   = m_addr.group(2).strip()
-        mun      = m_addr.group(3).strip()
-        uf       = m_addr.group(4).strip()
-        cep      = m_addr.group(5).strip()
-        
-        # Separa numero e complemento do logradouro se houver (ex: "RUA X, 123 — APTO")
-        l_parts = logr_raw.split(", ", 1)
-        logr = l_parts[0]
-        num  = "S/N"
-        compl = ""
-        if len(l_parts) > 1:
-            rest = l_parts[1].split(" — ", 1)
-            num = rest[0]
-            if len(rest) > 1: compl = rest[1]
-    else:
-        logr, num, compl, bairro, mun, uf, cep = "—","—","","—","—","—","—"
-
-    # CNAE Principal
-    m_cnae = re.search(r'Atividade Econômica Principal</h2>\s*<ul[^>]*>.*?<strong>(.*?)</strong><span>CNAE (.*?)</span>', html, re.DOTALL | re.IGNORECASE)
-    cnae_p = m_cnae.group(1).strip() if m_cnae else "—"
-    cnae_c = m_cnae.group(2).strip() if m_cnae else "—"
-
-    # CNAEs Secundários
-    cnaes_s = []
-    m_sec_block = re.search(r'Atividades Secundárias</h2>\s*<ul[^>]*>(.*?)</ul>', html, re.DOTALL | re.IGNORECASE)
-    if m_sec_block:
-        for m in re.finditer(r'<li>.*?<strong>(.*?)</strong><span>CNAE (.*?) <span', m_sec_block.group(1), re.DOTALL):
-            cnaes_s.append({"descricao": m.group(1).strip(), "codigo": m.group(2).strip()})
-
-    # QSA
-    qsa = []
-    m_qsa_block = re.search(r'Quadro de Sócios.*?<ul[^>]*>(.*?)</ul>', html, re.DOTALL | re.IGNORECASE)
-    if m_qsa_block:
-        for m in re.finditer(r'<li>.*?<strong>(.*?)</strong><span>(.*?)</span>', m_qsa_block.group(1), re.DOTALL):
-            qsa.append({"nome_socio": m.group(1).strip(), "qualificacao_socio": m.group(2).strip()})
-
-    return {
-        "cnpj": cnpj_digits, "razao_social": razao, "nome_fantasia": fantasia,
-        "situacao": situacao, "data_abertura": abertura, "porte": porte,
-        "natureza_juridica": nat_jur, "capital_social": capital,
-        "telefone": telefone, "email": email,
-        "logradouro": logr, "numero": num, "complemento": compl,
-        "bairro": bairro, "municipio": mun, "uf": uf, "cep": cep,
-        "cnae_principal": cnae_p, "cnae_codigo": cnae_c,
-        "cnaes_secundarios": cnaes_s, "qsa": qsa
+    d = {
+        "cnpj": cnpj_digits,
+        "razao_social": razao,
+        "nome_fantasia": _extract(html, "Nome Fantasia") or "",
+        "situacao": _extract(html, "Situação Cadastral") or _extract(html, "Situa\u00e7\u00e3o Cadastral") or _extract(html, "Situação") or "N/A",
+        "data_abertura": _extract(html, "Data de Abertura") or "—",
+        "porte": _extract(html, "Porte") or "—",
+        "natureza_juridica": _extract(html, "Natureza Jurídica") or _extract(html, "Natureza Jur\u00eddica") or "—",
+        "capital_social": _extract(html, "Capital Social") or "—",
+        "telefone": _extract(html, "Telefone") or "",
+        "email": _extract(html, "E-mail") or _extract(html, "Email") or "",
+        "logradouro": _extract(html, "Logradouro") or _extract(html, "Endereço") or _extract(html, "Endere\u00e7o") or "—",
+        "bairro": _extract(html, "Bairro") or "—",
+        "municipio": "—", "uf": "—", "cnae_principal": "—", "cnae_codigo": "—"
     }
-
-def gerar_html_norm(d):
-    razao, cnpj_f, cnpj_r = d["razao_social"], fmt_cnpj(d["cnpj"]), d["cnpj"]
-    sit = d["situacao"].upper()
-    if "ATIVA" in sit: b_cls, b_txt = "badge-ativa", "Ativa"
-    elif any(x in sit for x in ("BAIXADA", "CANCELADA")): b_cls, b_txt = "badge-baixada", d["situacao"].title()
-    elif "INAPTA" in sit: b_cls, b_txt = "badge-inapta", d["situacao"].title()
-    else: b_cls, b_txt = "badge-suspensa", d["situacao"].title()
-
-    socios_html = "".join([f'<li><div class="li-icon">{ICON_SOCIO}</div><div class="li-body"><strong>{s["nome_socio"]}</strong><span>{s["qualificacao_socio"]}</span></div></li>' for s in d["qsa"]]) or '<li><div class="li-body"><span>Não disponível</span></div></li>'
-    cnaes_html = "".join([f'<li><div class="li-icon">{ICON_SEC}</div><div class="li-body"><strong>{c["descricao"]}</strong><span>CNAE {c["codigo"]} <span class="tag">Secundária</span></span></div></li>' for c in d["cnaes_secundarios"]]) or '<li><div class="li-body"><span>—</span></div></li>'
     
-    end_str = f"{d['logradouro']}, {d['numero']}" + (f" — {d['complemento']}" if d["complemento"] else "")
-    tel_f = f'<div class="field"><label>Telefone</label><p>{d["telefone"]}</p></div>' if d["telefone"] else ""
-    email_f = f'<div class="field"><label>E-mail</label><p>{d["email"]}</p></div>' if d["email"] else ""
+    # Município/UF
+    m_loc = re.search(r'<(?:div|span|label)[^>]*(?:municipio|uf|cidade)[^>]*>(?:Cidade/UF|Município)</(?:label|div|span)>\s*<p>(.*?)</p>', html, re.I | re.S)
+    if not m_loc:
+        m_loc = re.search(r'<label>Cidade/UF</label><p>(.*?)</p>', html, re.I)
+    
+    if m_loc:
+        val = m_loc.group(1)
+        parts = val.split(" — ") if " — " in val else val.split(" / ") if " / " in val else [val]
+        d["municipio"] = parts[0].strip()
+        if len(parts) > 1: d["uf"] = parts[1].strip()
+    
+    m_cnae = re.search(r'(?:Atividade Principal|CNAE).*?<strong>(.*?)</strong>(?:.*?CNAE (.*?)(?:</span>| |<|/))?', html, re.S | re.I)
+    if m_cnae:
+        d["cnae_principal"] = m_cnae.group(1).strip()
+        if m_cnae.group(2): d["cnae_codigo"] = m_cnae.group(2).strip().replace("(", "").replace(")", "").strip()
 
-    schema = json.dumps({"@context": "https://schema.org", "@type": "Organization", "name": d["nome_fantasia"] or razao, "legalName": razao, "taxID": cnpj_f, "url": f"{DOMAIN}/cnpj/{cnpj_r}/"}, ensure_ascii=False)
+    return d
 
-    return f"""<!DOCTYPE html>
-<html lang="pt-BR">
+def gerar_html_premium(d):
+    razao = d["razao_social"]
+    nome = (d["nome_fantasia"] or razao).upper()
+    cnpj_f = fmt_cnpj(d["cnpj"])
+    cnpj_r = d["cnpj"]
+    sit = d["situacao"].upper()
+    b_cls = "ba" if "ATIVA" in sit else "bb" if any(x in sit for x in ("BAIXADA", "INAPTA")) else "bo"
+
+    return f"""<!DOCTYPE html><html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{razao} — CNPJ {cnpj_f} | BuscaCNPJ.work</title>
-<meta name="description" content="Dados do CNPJ {cnpj_f} — {razao}. Situação: {d['situacao']}. Consulta gratuita.">
-<link rel="canonical" href="{DOMAIN}/cnpj/{cnpj_r}/">
-<script type="application/ld+json">{schema}</script>
-{CNPJ_HEAD}
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>{nome} — CNPJ {cnpj_f} | BuscaCNPJ.work</title>
+    <meta name="description" content="Dados do CNPJ {cnpj_f}: {razao}. Situação {d['situacao']}.">
+    <link rel="canonical" href="{DOMAIN}/cnpj/{cnpj_r}/">
+    <link rel="stylesheet" href="../../cnpj.css?v={VERSION}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-<div id="copy-toast"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span id="copy-toast-text">Copiado!</span></div>
-<header><div class="header-inner"><a class="logo" href="/">Busca<span>CNPJ</span>.work</a><form class="header-search" action="/" onsubmit="var v=this.qs.value.replace(/\\D/g,'');if(v.length===14){{window.location='/cnpj/'+v+'/';return false;}}alert('CNPJ inválido.');return false;"><input type="text" name="qs" maxlength="18" placeholder="Consultar outro CNPJ…" oninput="var v=this.value.replace(/\\D/g,'').slice(0,14);if(v.length>12)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8,12)+'-'+v.slice(12);else if(v.length>8)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5,8)+'/'+v.slice(8);else if(v.length>5)v=v.slice(0,2)+'.'+v.slice(2,5)+'.'+v.slice(5);else if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);this.value=v;"><button type="submit">Consultar</button></form><nav><a href="/">Início</a><a href="/sobre/">Sobre</a></nav></div></header>
-<div class="page-wrap">
-  <nav class="bc"><a href="/">Início</a><span class="bc-sep">›</span><span>{cnpj_f}</span></nav>
-  <div class="company-hero">
-    <div class="badge {b_cls}"><span class="badge-dot"></span>{b_txt}</div>
-    <div class="copy-row-name"><h1 class="company-name">{razao}</h1><button class="copy-btn" onclick="copyData('{razao}', 'Razão social copiada!', this)">{ICON_COPY} Copiar nome</button></div>
-    <div class="copy-row"><p class="cnpj-display">CNPJ {cnpj_f}</p><button class="copy-btn" onclick="copyData('{cnpj_r}', 'CNPJ copiado!', this)">{ICON_COPY} CP</button><button class="copy-btn" onclick="copyData('{cnpj_f}', 'Formatado!', this)">{ICON_COPY} CP Fmt</button></div>
-  </div>
-  <p class="sec-label">Dados Gerais</p>
-  <div class="fields">
-    <div class="field"><label>Razão Social</label><p>{razao}</p></div>
-    <div class="field"><label>Nome Fantasia</label><p>{d['nome_fantasia'] or '—'}</p></div>
-    <div class="field"><label>CNPJ</label><p>{cnpj_f}</p></div>
-    <div class="field"><label>Situação Cadastral</label><p>{d['situacao']}</p></div>
-    <div class="field"><label>Data de Abertura</label><p>{d['data_abertura']}</p></div>
-    <div class="field"><label>Porte</label><p>{d['porte']}</p></div>
-    <div class="field"><label>Natureza Jurídica</label><p>{d['natureza_juridica']}</p></div>
-    <div class="field"><label>Capital Social</label><p>{d['capital_social']}</p></div>
-    {tel_f}{email_f}
-  </div>
-  <p class="sec-label">Endereço</p>
-  <div class="addr-card"><div class="addr-icon">{ICON_PIN}</div><div><p><strong>{end_str}</strong><br>{d['bairro']}<br>{d['municipio']} / {d['uf']}<br>CEP {d['cep']}</p></div></div>
-  <p class="sec-label">Atividade Econômica Principal</p><ul class="clean-list"><li><div class="li-icon">{ICON_CNAE}</div><div class="li-body"><strong>{d['cnae_principal']}</strong><span>CNAE {d['cnae_codigo']}</span></div></li></ul>
-  <p class="sec-label">Atividades Secundárias</p><ul class="clean-list">{cnaes_html}</ul>
-  <p class="sec-label">Quadro de Sócios e Administradores</p><ul class="clean-list">{socios_html}</ul>
-  <div class="fonte"><span class="fonte-icon">{ICON_INFO}</span><p>Dados públicos da Receita Federal.</p></div>
-  <div class="affiliate-section">
-    <div class="affiliate-header"><div class="partner-label">{ICON_PARTNER} Parceiro</div><img src="/hostinger_logo.png" alt="Hostinger" class="partner-logo"><h2>Sites profissionais</h2><p>Hospedagem Hostinger com performance premium.</p></div>
-    <div class="offers"><div class="offer-card"><div class="offer-image" style="background-image:url('https://images.unsplash.com/photo-1573164713988-8665fc963095?w=600');"></div><div class="offer-content"><span class="offer-badge">Hospedagem</span><h3 class="offer-title">Business</h3><p class="offer-desc">Performance ultra-rápida.</p><div class="offer-price">R$ 19,99<span>/mês</span></div><ul class="offer-features"><li>{ICON_CHECK} 50 websites</li><li>{ICON_CHECK} NVMe</li></ul><a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" target="_blank" class="btn-offer">Ver Plano</a></div></div></div>
-    <p class="disclaimer">* Valores Hostinger.</p>
-  </div>
+<header><div class="header-inner"><a class="logo" href="/">Busca<span>CNPJ</span>.work</a><nav><a href="/">Início</a><a href="/sobre/">Sobre</a></nav></div></header>
+<div class="page-wrap fade-up">
+    <div class="bc"><a href="/">Início</a> / <a href="/cnpj/">CNPJ</a> / {cnpj_f}</div>
+    <div class="company-hero">
+        <div class="badge {b_cls}">{d['situacao']}</div>
+        <h1 class="company-title">{nome}</h1>
+        <p style="color:var(--text-muted); font-weight:600; margin-bottom: 20px;">CNPJ {cnpj_f}</p>
+        <div class="copy-group">
+            <button class="btn-copy" onclick="copyText('{razao}', this)">Copiar Nome</button>
+            <button class="btn-copy" onclick="copyText('{cnpj_r}', this)">Copiar CNPJ</button>
+            <button class="btn-copy" onclick="copyText('{cnpj_f}', this)">Formatado</button>
+        </div>
+    </div>
+    <h2 class="sec-title">Dados de Registro</h2>
+    <div class="info-grid">
+        <div class="info-box"><label>Razão Social</label><p>{razao}</p></div>
+        <div class="info-box"><label>Nome Fantasia</label><p>{d['nome_fantasia'] or '—'}</p></div>
+        <div class="info-box"><label>Data de Abertura</label><p>{d['data_abertura']}</p></div>
+        <div class="info-box"><label>Situação</label><p>{d['situacao']}</p></div>
+        <div class="info-box"><label>Porte</label><p>{d['porte']}</p></div>
+        <div class="info-box"><label>Capital Social</label><p>{d['capital_social']}</p></div>
+    </div>
+    <h2 class="sec-title">Localização & Contato</h2>
+    <div class="info-grid">
+        <div class="info-box" style="grid-column: span 2;"><label>Endereço</label><p>{d['logradouro'] or '—'}</p></div>
+        <div class="info-box"><label>Bairro</label><p>{d['bairro']}</p></div>
+        <div class="info-box"><label>Cidade/UF</label><p>{d['municipio']} — {d['uf']}</p></div>
+        <div class="info-box"><label>Telefone</label><p>{d['telefone'] or '—'}</p></div>
+        <div class="info-box"><label>Email</label><p>{d['email'] or '—'}</p></div>
+    </div>
+    <h2 class="sec-title">Atividade Principal</h2>
+    <div class="info-box"><label>CNAE</label><p>{d['cnae_principal']} (CNAE {d['cnae_codigo']})</p></div>
+    <div class="partner-section">
+        <div style="margin-bottom:2rem; opacity:0.6; font-weight:800; letter-spacing:2px; text-transform:uppercase; font-size:0.75rem;">Sugestão para seu negócio</div>
+        <h2 style="font-size:3rem; margin-bottom:1rem; color:#fff;">Hostinger Brasil</h2>
+        <div class="partner-grid">
+            <div class="partner-card">
+                <span class="badge ba" style="margin-bottom:1rem;">Hospedagem</span>
+                <h3>Sites Profissionais</h3>
+                <div class="partner-price">R$ 19,99<span>/mês</span></div>
+                <a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" class="btn-cta" target="_blank">Ativar Oferta</a>
+            </div>
+            <div class="partner-card">
+                <span class="badge bo" style="margin-bottom:1rem;">Email Business</span>
+                <h3>Email Corporativo</h3>
+                <div class="partner-price">R$ 9,95<span>/mês</span></div>
+                <a href="https://www.hostinger.com/br?REFERRALCODE=1VINICIUS74" class="btn-cta" target="_blank">Criar Email</a>
+            </div>
+        </div>
+    </div>
 </div>
-<footer><nav class="fn"><a href="/">Início</a><a href="/sobre/">Sobre</a></nav><p>© 2026 BuscaCNPJ.work</p></footer>
+<footer><p>© 2026 BuscaCNPJ.work — Dados Oficiais.</p></footer>
 <script>
-function copyData(text, message, btn) {{
-  navigator.clipboard.writeText(text).then(function() {{
-    var orig = btn.innerHTML; btn.classList.add('copied'); btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"></polyline></svg>!';
-    setTimeout(function() {{ btn.classList.remove('copied'); btn.innerHTML = orig; }}, 2000);
-    var toast = document.getElementById('copy-toast'); toast.classList.add('show');
-    setTimeout(function() {{ toast.classList.remove('show'); }}, 2500);
-  }});
+function copyText(txt, btn) {{
+    navigator.clipboard.writeText(txt).then(() => {{
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Copiado!";
+        setTimeout(() => {{ btn.innerHTML = originalText; }}, 2000);
+    }}).catch(() => {{}});
 }}
 </script>
-</body>
-</html>"""
+</body></html>"""
 
 def audit(folder: Path):
     path, cnpj = folder / "index.html", folder.name
     if not path.exists(): return cnpj, "FALTA"
     try:
         html = path.read_text(encoding="utf-8", errors="replace")
-        if 'href="../../cnpj.css?v=1.1"' in html and "affiliate-section" in html: return cnpj, "OK"
-        # Reparo
+        # Se já tiver v=1.3 e o design novo, pula
+        if f'v={VERSION}' in html and 'class="info-grid"' in html: return cnpj, "OK"
+        
         d = parse_html(html, cnpj)
-        if not d["razao_social"] or d["razao_social"] == "N/A": return cnpj, "ERRO_DADOS"
-        path.write_text(gerar_html_norm(d), encoding="utf-8")
+        if d["razao_social"] == "N/A": 
+            return cnpj, "ERRO_DADOS"
+        
+        new_html = gerar_html_premium(d)
+        path.write_text(new_html, encoding="utf-8")
         return cnpj, "REPARADO"
-    except Exception as e: return cnpj, f"ERRO: {e}"
+    except Exception as e:
+        return cnpj, f"ERRO:{e}"
 
 def main():
     folders = [p for p in CNPJ_DIR.iterdir() if p.is_dir()]
     total = len(folders)
-    log.info("Auditoria manual: %d páginas", total)
-    counts = {"OK":0, "REPARADO":0, "ERRO":0}
+    log.info("Iniciando REPARO DEFINITIVO v%s em %d pastas...", VERSION, total)
+    counts = {"OK": 0, "REPARADO": 0, "ERRO": 0}
+    
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         futs = {ex.submit(audit, f): f for f in folders}
         for i, fut in enumerate(as_completed(futs), 1):
-            c, st = fut.result()
-            base = st.split(":")[0]
-            counts[base if base in counts else "ERRO"] = counts.get(base if base in counts else "ERRO", 0) + 1
-            if i % 5000 == 0 or i == total: log.info("Progresso: %d/%d - OK:%d REP:%d ERR:%d", i, total, counts["OK"], counts["REPARADO"], counts["ERRO"])
-    log.info("CONCLUÍDO: %s", counts)
+            cnpj, st = fut.result()
+            if st == "OK": counts["OK"] += 1
+            elif st == "REPARADO": counts["REPARADO"] += 1
+            else:
+                counts["ERRO"] += 1
+                if counts["ERRO"] <= 10:
+                    log.warning("Falha em %s: %s", cnpj, st)
+            
+            if i % 1000 == 0 or i == total:
+                log.info("Progresso: %d/%d - OK:%d REP:%d ERR:%d", i, total, counts["OK"], counts["REPARADO"], counts["ERRO"])
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()

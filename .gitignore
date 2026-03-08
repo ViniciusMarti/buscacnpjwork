@@ -1,0 +1,12 @@
+*.log
+*.json
+update_index.py
+check_json.py
+debug_audit.py
+check_empty.py
+gerador.log
+reparo.log
+auditoria.log
+progresso.json
+__pycache__/
+.vscode/
