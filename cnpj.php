@@ -35,8 +35,32 @@ function format_money($val) {
 
 // Prepara dados para exibição
 $cnpj_f = format_cnpj($data['cnpj']);
-$nome = strtoupper($data['razao_social']);
-$situacao = strtoupper($data['situacao'] ?: 'N/A');
+$nome = strtoupper(trim($data['razao_social']));
+
+$is_updating = empty($nome);
+if ($is_updating) {
+    $nome = "CADASTRO EM ATUALIZAÇÃO";
+    $situacao = "AGUARDANDO SYNC";
+    $data['nome_fantasia'] = "Processando informações junto à base unificada...";
+    $data['logradouro'] = "Aguardando sincronização de dados cadastrais";
+    $data['numero'] = "S/N";
+    $data['complemento'] = "";
+    $data['bairro'] = "—";
+    $data['municipio'] = "Aguardando";
+    $data['uf'] = "--";
+    $data['telefone'] = "—";
+    $data['email'] = "—";
+    $data['cnae_principal_descricao'] = "Sincronização em andamento";
+    $data['cnae_principal_codigo'] = "Aguarde";
+    $data['capital_social'] = 0;
+    $data['porte'] = "—";
+    $data['data_abertura'] = '';
+    $data['cnaes_secundarios'] = '';
+    $data['quadro_societario'] = 'Informação não disponível no momento';
+} else {
+    $situacao = strtoupper($data['situacao'] ?: 'N/A');
+}
+
 $badge_class = ($situacao === 'ATIVA') ? 'ba' : (($situacao === 'INAPTA' || $situacao === 'BAIXADA') ? 'ro' : 'bo');
 
 ?>
