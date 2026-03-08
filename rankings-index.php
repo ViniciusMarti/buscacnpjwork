@@ -17,7 +17,7 @@ try {
     
     // Pegar top 10 maiores empresas do Brasil (Geral)
     // Isso é RÁPIDO se houver índice em capital_social
-    $stmt_top = $db->query("SELECT * FROM dados_cnpj ORDER BY capital_social DESC LIMIT 10");
+    $stmt_top = $db->query("SELECT * FROM dados_cnpj WHERE capital_social > 0 AND CAST(capital_social AS CHAR) NOT LIKE '999999%' ORDER BY capital_social DESC LIMIT 10");
     $top_br = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {

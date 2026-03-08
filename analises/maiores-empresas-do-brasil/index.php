@@ -10,7 +10,7 @@ try {
     $db = getDB();
     
     // As 20 Maiores
-    $stmt = $db->query("SELECT * FROM dados_cnpj WHERE capital_social > 0 ORDER BY capital_social DESC LIMIT 20");
+    $stmt = $db->query("SELECT * FROM dados_cnpj WHERE capital_social > 0 AND CAST(capital_social AS CHAR) NOT LIKE '999999%' ORDER BY capital_social DESC LIMIT 20");
     $top20 = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Empresas que valem mais que 1 bilhão (count approximate)

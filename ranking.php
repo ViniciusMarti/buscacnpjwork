@@ -102,7 +102,7 @@ try {
         $params[':city'] = $city_filter;
     }
 
-    $query .= " ORDER BY capital_social DESC LIMIT 100";
+    $query .= " AND CAST(capital_social AS CHAR) NOT LIKE '999999%' ORDER BY capital_social DESC LIMIT 100";
     $stmt_ranking = $db->prepare($query);
     $stmt_ranking->execute($params);
     $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);
