@@ -105,8 +105,11 @@ nav a:hover { color: var(--primary); }
   display: flex; gap: 10px; backdrop-filter: blur(24px);
 }
 .search-container input {
-  flex: 1; border: none; background: transparent; padding: 16px 24px;
-  font-size: 1.1rem; color: var(--text); outline: none; font-family: inherit;
+  flex: 1; border: none; background: transparent; padding: 16px 18px;
+  font-size: 1rem; color: var(--text); outline: none; font-family: inherit;
+}
+.search-container input::placeholder {
+  font-size: 0.95rem; color: var(--text-muted); opacity: 0.8;
 }
 .search-container button {
   background: var(--primary); color: white; border: none; padding: 0 32px;
