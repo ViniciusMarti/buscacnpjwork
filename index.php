@@ -71,7 +71,7 @@ $display_count = number_format($total_cnpjs, 0, ',', '.');
 
 <header>
     <div class="header-inner">
-        <a class="logo" href="/">Busca<span>CNPJ</span> Grátis</a>
+        <a class="logo" href="/" aria-label="BuscaCNPJ Grátis - Ir para a página inicial">Busca<span>CNPJ</span> Grátis</a>
         <nav>
             <a href="/">Início</a>
             <a href="/rankings/">Rankings</a>
@@ -87,7 +87,7 @@ $display_count = number_format($total_cnpjs, 0, ',', '.');
         
         <div class="search-container">
             <input id="q" type="text" maxlength="18" placeholder="Digite o CNPJ (apenas números)..." 
-                   onkeydown="if(event.key==='Enter')buscar()" autofocus>
+                   onkeydown="if(event.key==='Enter')buscar()" aria-label="Digite o CNPJ para consulta" autofocus>
             <button onclick="buscar()">Consultar</button>
         </div>
     </div>

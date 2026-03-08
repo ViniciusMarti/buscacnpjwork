@@ -91,9 +91,9 @@ if (strlen($meta_description) > 155) {
     <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Organization", "name": "<?php echo $nome; ?>", "taxID": "<?php echo $cnpj_f; ?>"}</script>
 </head>
 <body>
-<header><div class="header-inner"><a class="logo" href="/">Busca<span>CNPJ</span> Grátis</a><nav><a href="/">Início</a><a href="/rankings/">Rankings</a><a href="/sobre/">Sobre</a></nav></div></header>
+<header><div class="header-inner"><a class="logo" href="/" aria-label="BuscaCNPJ Grátis - Ir para a página inicial">Busca<span>CNPJ</span> Grátis</a><nav><a href="/">Início</a><a href="/rankings/">Rankings</a><a href="/sobre/">Sobre</a></nav></div></header>
 <div class="page-wrap fade-up">
-    <div class="bc"><a href="/">Início</a> / <a href="/cnpj/">CNPJ</a> / <?php echo $cnpj_f; ?></div>
+    <nav aria-label="Breadcrumb" class="bc"><a href="/">Início</a> / <a href="/cnpj/">CNPJ</a> / <?php echo $cnpj_f; ?></nav>
     <div class="company-hero">
         <div class="badge <?php echo $badge_class; ?>"><?php echo $situacao; ?></div>
         <h1 class="company-title"><?php echo $nome; ?></h1>
@@ -110,9 +110,9 @@ if (strlen($meta_description) > 155) {
     
     <h2 class="sec-title">Dados de Registro</h2>
     <div class="info-grid">
-        <div class="info-box"><label>Razão Social</label><p><?php echo $nome; ?></p></div>
-        <div class="info-box"><label>Nome Fantasia</label><p><?php echo $data['nome_fantasia'] ?: '—'; ?></p></div>
-        <div class="info-box"><label>Data de Abertura</label><p>
+        <div class="info-box"><div class="data-label">Razão Social</div><p><?php echo $nome; ?></p></div>
+        <div class="info-box"><div class="data-label">Nome Fantasia</div><p><?php echo $data['nome_fantasia'] ?: '—'; ?></p></div>
+        <div class="info-box"><div class="data-label">Data de Abertura</div><p>
             <?php 
                 $data_abertura = $data['data_abertura'];
                 if ($data_abertura) {
@@ -126,9 +126,9 @@ if (strlen($meta_description) > 155) {
                 }
             ?>
         </p></div>
-        <div class="info-box"><label>Situação</label><p><?php echo $situacao; ?></p></div>
-        <div class="info-box"><label>Porte</label><p><?php echo $data['porte'] ?: 'N/A'; ?></p></div>
-        <div class="info-box"><label>Capital Social</label><p><?php echo format_money($data['capital_social']); ?></p></div>
+        <div class="info-box"><div class="data-label">Situação</div><p><?php echo $situacao; ?></p></div>
+        <div class="info-box"><div class="data-label">Porte</div><p><?php echo $data['porte'] ?: 'N/A'; ?></p></div>
+        <div class="info-box"><div class="data-label">Capital Social</div><p><?php echo format_money($data['capital_social']); ?></p></div>
     </div>
 
     <!-- CAMBLY AD -->
@@ -144,7 +144,7 @@ if (strlen($meta_description) > 155) {
                 <span class="term">/mês</span>
                 <span class="badge">Opção mais vendida</span>
             </div>
-            <a href="https://www.cambly.com/invite/VINICIUSCODES?st=030726&amp;sc=4" target="_blank" rel="sponsored" class="promo-cta">
+            <a href="https://www.cambly.com/invite/VINICIUSCODES?st=030726&amp;sc=4" target="_blank" rel="sponsored" class="promo-cta" aria-label="Ir para o Cambly e aproveitar oferta de inglês">
                 Começar agora 
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
             </a>
@@ -155,20 +155,20 @@ if (strlen($meta_description) > 155) {
 
     <h2 class="sec-title">Localização & Contato</h2>
     <div class="info-grid">
-        <div class="info-box" style="grid-column: span 2;"><label>Endereço</label><p><?php echo $data['logradouro'] . ', ' . $data['numero'] . ($data['complemento'] ? ' - ' . $data['complemento'] : ''); ?></p></div>
-        <div class="info-box"><label>Bairro</label><p><?php echo $data['bairro'] ?: '—'; ?></p></div>
-        <div class="info-box"><label>Cidade/UF</label><p><?php echo $data['municipio'] . ' — ' . $data['uf']; ?></p></div>
-        <div class="info-box"><label>Telefone</label><p><?php echo $data['telefone'] ?: '—'; ?></p></div>
-        <div class="info-box"><label>Email</label><p><?php echo strtolower($data['email']) ?: '—'; ?></p></div>
+        <div class="info-box" style="grid-column: span 2;"><div class="data-label">Endereço</div><p><?php echo $data['logradouro'] . ', ' . $data['numero'] . ($data['complemento'] ? ' - ' . $data['complemento'] : ''); ?></p></div>
+        <div class="info-box"><div class="data-label">Bairro</div><p><?php echo $data['bairro'] ?: '—'; ?></p></div>
+        <div class="info-box"><div class="data-label">Cidade/UF</div><p><?php echo $data['municipio'] . ' — ' . $data['uf']; ?></p></div>
+        <div class="info-box"><div class="data-label">Telefone</div><p><?php echo $data['telefone'] ?: '—'; ?></p></div>
+        <div class="info-box"><div class="data-label">Email</div><p><?php echo strtolower($data['email']) ?: '—'; ?></p></div>
     </div>
 
     <h2 class="sec-title">Atividades Econômicas</h2>
     <div class="info-box" style="margin-bottom:24px;">
-        <label>Atividade Principal</label>
+        <div class="data-label">Atividade Principal</div>
         <p><?php echo $data['cnae_principal_descricao'] . ' (CNAE ' . $data['cnae_principal_codigo'] . ')'; ?></p>
     </div>
     <div class="info-box">
-        <label>Atividades Secundárias</label>
+        <div class="data-label">Atividades Secundárias</div>
         <ul style="list-style:none; padding-top:10px;">
             <?php 
             $sec_str = trim($data['cnaes_secundarios']);
