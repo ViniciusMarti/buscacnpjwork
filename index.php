@@ -1,4 +1,4 @@
-<?php
+<?php // Last Deploy: 2026-03-08 15:45
 // Conexão MySQL centralizada
 require_once __DIR__ . '/config/db.php';
 
