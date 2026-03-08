@@ -6,7 +6,7 @@ $total_cnpjs = 0;
 
 try {
     $db = getDB();
-    $total_cnpjs = $db->query("SELECT COUNT(*) FROM empresas")->fetchColumn() ?: 0;
+    $total_cnpjs = $db->query("SELECT COUNT(*) FROM dados_cnpj")->fetchColumn() ?: 0;
 } catch (Exception $e) {
     $total_cnpjs = "milhões de";
 }

@@ -16,7 +16,7 @@ def init_db():
 
     # Criação da tabela principal
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS empresas (
+    CREATE TABLE IF NOT EXISTS dados_cnpj (
         cnpj TEXT PRIMARY KEY,
         razao_social TEXT,
         nome_fantasia TEXT,
@@ -42,8 +42,8 @@ def init_db():
     ''')
 
     # Índices para busca rápida
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cnpj ON empresas(cnpj)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_razao ON empresas(razao_social)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cnpj ON dados_cnpj(cnpj)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_razao ON dados_cnpj(razao_social)')
 
     conn.commit()
     conn.close()

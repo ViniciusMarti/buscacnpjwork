@@ -12,7 +12,7 @@ if (strlen($cnpj) !== 14) {
 try {
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT * FROM empresas WHERE cnpj = :cnpj");
+    $stmt = $db->prepare("SELECT * FROM dados_cnpj WHERE cnpj = :cnpj");
     $stmt->execute([':cnpj' => $cnpj]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 

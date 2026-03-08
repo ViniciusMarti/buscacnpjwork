@@ -16,7 +16,7 @@ def gerar_sitemap():
     
     # Busca todos os CNPJs ativos ou com razão social
     print("Buscando CNPJs no banco de dados...")
-    cnpjs = [row[0] for row in cursor.execute("SELECT cnpj FROM empresas WHERE razao_social != ''").fetchall()]
+    cnpjs = [row[0] for row in cursor.execute("SELECT cnpj FROM dados_cnpj WHERE razao_social != ''").fetchall()]
     
     if not cnpjs:
         print("Nenhum CNPJ com dados encontrado no banco.")

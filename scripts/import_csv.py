@@ -46,7 +46,7 @@ def import_csv_file(csv_filename, conn):
                 count += 1
                 if count % 5000 == 0:
                     cursor.executemany('''
-                        INSERT OR REPLACE INTO empresas (
+                        INSERT OR REPLACE INTO dados_cnpj (
                             cnpj, razao_social, nome_fantasia, situacao, data_abertura, 
                             porte, capital_social, logradouro, numero, complemento, 
                             bairro, cep, municipio, uf, telefone, email, 
@@ -62,7 +62,7 @@ def import_csv_file(csv_filename, conn):
         # Insere o restante
         if batch:
             cursor.executemany('''
-                INSERT OR REPLACE INTO empresas (
+                INSERT OR REPLACE INTO dados_cnpj (
                     cnpj, razao_social, nome_fantasia, situacao, data_abertura, 
                     porte, capital_social, logradouro, numero, complemento, 
                     bairro, cep, municipio, uf, telefone, email, 

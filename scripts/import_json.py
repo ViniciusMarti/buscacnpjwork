@@ -55,7 +55,7 @@ def import_json(json_file):
         quadro_societario = str(row.get('quadro_societario') or '')
 
         cursor.execute('''
-            INSERT OR REPLACE INTO empresas (
+            INSERT OR REPLACE INTO dados_cnpj (
                 cnpj, razao_social, nome_fantasia, situacao, data_abertura, porte, capital_social,
                 logradouro, numero, complemento, bairro, cep, municipio, uf, telefone, email,
                 cnae_principal_codigo, cnae_principal_descricao, cnaes_secundarios, quadro_societario,

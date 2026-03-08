@@ -6,7 +6,7 @@ DB_PATH = r"c:\Users\marti\Documents\repositorio\buscacnpjgratis\database\dados.
 def check():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='empresas'")
+    c.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='dados_cnpj'")
     indexes = [r[0] for r in c.fetchall()]
     print(f"Indices found: {indexes}")
     conn.close()

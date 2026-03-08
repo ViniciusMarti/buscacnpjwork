@@ -42,38 +42,38 @@ try {
     $db = getDB();
 
     // 1. Stats Gerais
-    $total_companies = $db->prepare("SELECT COUNT(*) FROM empresas WHERE uf = :uf");
+    $total_companies = $db->prepare("SELECT COUNT(*) FROM dados_cnpj WHERE uf = :uf");
     $total_companies->execute([':uf' => $uf]);
     $count_total = $total_companies->fetchColumn();
 
-    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM empresas WHERE uf = :uf");
+    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM dados_cnpj WHERE uf = :uf");
     $total_capital->execute([':uf' => $uf]);
     $capital_total = $total_capital->fetchColumn();
 
     // 2. Panorama
     // Idade Média (aproximada pela data de abertura)
-    $stmt_age = $db->prepare("SELECT AVG(YEAR(CURDATE()) - YEAR(STR_TO_DATE(LEFT(data_abertura,10), '%Y-%m-%d'))) FROM empresas WHERE uf = :uf AND data_abertura != ''");
+    $stmt_age = $db->prepare("SELECT AVG(YEAR(CURDATE()) - YEAR(STR_TO_DATE(LEFT(data_abertura,10), '%Y-%m-%d'))) FROM dados_cnpj WHERE uf = :uf AND data_abertura != ''");
     $stmt_age->execute([':uf' => $uf]);
     $avg_age = round($stmt_age->fetchColumn() ?: 0);
 
     // Concentração
-    $stmt_city = $db->prepare("SELECT municipio, COUNT(*) as c FROM empresas WHERE uf = :uf GROUP BY municipio ORDER BY c DESC LIMIT 1");
+    $stmt_city = $db->prepare("SELECT municipio, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf GROUP BY municipio ORDER BY c DESC LIMIT 1");
     $stmt_city->execute([':uf' => $uf]);
     $top_city = $stmt_city->fetch(PDO::FETCH_ASSOC);
     $concentration_perc = ($count_total > 0) ? ($top_city['c'] / $count_total) * 100 : 0;
 
     // Setores Dominantes
-    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM empresas WHERE uf = :uf GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
     $stmt_cnae->execute([':uf' => $uf]);
     $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
 
     // 3. Brasil Stats (para %)
-    $stmt_br = $db->query("SELECT COUNT(*) FROM empresas");
+    $stmt_br = $db->query("SELECT COUNT(*) FROM dados_cnpj");
     $br_total = $stmt_br->fetchColumn();
     $participation = ($br_total > 0) ? ($count_total / $br_total) * 100 : 0;
 
     // 4. Ranking Top 1000 com filtros
-    $query = "SELECT * FROM empresas WHERE uf = :uf";
+    $query = "SELECT * FROM dados_cnpj WHERE uf = :uf";
     $params = [':uf' => $uf];
 
     if ($search) {
@@ -96,12 +96,12 @@ try {
 
     // 5. Opções para Dropdowns
     $cities = [];
-    $stmt_cities = $db->prepare("SELECT DISTINCT municipio FROM empresas WHERE uf = :uf ORDER BY municipio");
+    $stmt_cities = $db->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf ORDER BY municipio");
     $stmt_cities->execute([':uf' => $uf]);
     while($row = $stmt_cities->fetch(PDO::FETCH_ASSOC)) $cities[] = $row['municipio'];
 
     $cnaes = [];
-    $stmt_cnaes = $db->prepare("SELECT DISTINCT cnae_principal_descricao FROM empresas WHERE uf = :uf AND cnae_principal_descricao != '' ORDER BY cnae_principal_descricao");
+    $stmt_cnaes = $db->prepare("SELECT DISTINCT cnae_principal_descricao FROM dados_cnpj WHERE uf = :uf AND cnae_principal_descricao != '' ORDER BY cnae_principal_descricao");
     $stmt_cnaes->execute([':uf' => $uf]);
     while($row = $stmt_cnaes->fetch(PDO::FETCH_ASSOC)) $cnaes[] = $row['cnae_principal_descricao'];
 

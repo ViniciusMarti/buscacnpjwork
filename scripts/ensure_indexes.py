@@ -14,11 +14,11 @@ def add_indexes():
     cursor = conn.cursor()
 
     indexes = [
-        ("idx_uf", "empresas(uf)"),
-        ("idx_municipio", "empresas(municipio)"),
-        ("idx_capital", "empresas(capital_social DESC)"),
-        ("idx_razao", "empresas(razao_social)"),
-        ("idx_cnpj", "empresas(cnpj)")
+        ("idx_uf", "dados_cnpj(uf)"),
+        ("idx_municipio", "dados_cnpj(municipio)"),
+        ("idx_capital", "dados_cnpj(capital_social DESC)"),
+        ("idx_razao", "dados_cnpj(razao_social)"),
+        ("idx_cnpj", "dados_cnpj(cnpj)")
     ]
 
     for name, target in indexes:
