@@ -213,41 +213,50 @@ nav a:hover { color: var(--primary); }
 
 /* ── Cambly Hybrid Banner ── */
 .cambly-banner-card {
-    display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px;
-    background: #ffffff; border-radius: 24px; overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.1); align-items: stretch;
-    text-align: left; margin-top: 20px;
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;
+    background: #ffffff !important; border-radius: 24px; overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1); align-items: center;
+    text-align: left; margin: 40px auto; color: #1a1a1a !important;
+    max-width: 1000px;
 }
-.cambly-content { padding: 40px 50px; }
-.cambly-logo { height: 26px; margin-bottom: 20px; display: block; }
+.cambly-content { padding: 40px; }
+.cambly-logo { height: 24px; width: auto; margin-bottom: 20px; display: block; }
 .cambly-title { 
-    font-family: 'Outfit', sans-serif; font-size: 2.2rem !important; 
-    font-weight: 800; line-height: 1.1; color: #1a1a1a !important; 
-    margin-bottom: 16px !important; 
+    font-family: 'Inter', sans-serif; font-size: 1.8rem !important; 
+    font-weight: 800; line-height: 1.2; color: #1a1a1a !important; 
+    margin: 0 0 12px !important;
 }
-.cambly-text { font-size: 1rem; color: #4a4a4a; margin-bottom: 24px; line-height: 1.5; }
-.cambly-price-row { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
-.cambly-price { font-size: 1.8rem; font-weight: 900; color: #1a1a1a; }
-.cambly-price span { font-size: 0.8rem; opacity: 0.6; }
+.cambly-text { 
+    font-size: 1rem !important; color: #333333 !important; 
+    margin-bottom: 20px !important; line-height: 1.5 !important;
+    font-weight: 400 !important;
+    display: block !important; visibility: visible !important;
+}
+.cambly-price-row { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.cambly-price { font-size: 1.6rem; font-weight: 900; color: #1a1a1a !important; }
+.cambly-price span { font-size: 0.8rem; opacity: 0.7; color: #666 !important; }
 .cambly-badge { 
-    background: #ff4757; color: white; padding: 4px 10px; 
+    background: #ff4757; color: white !important; padding: 4px 10px; 
     border-radius: 6px; font-size: 0.7rem; font-weight: 700; 
     text-transform: uppercase; 
 }
 .cambly-cta { 
-    display: inline-block; background: #FFCB3C; color: #1a1a1a; 
+    display: inline-block; background: #FFCB3C; color: #1a1a1a !important; 
     padding: 14px 28px; border-radius: 50px; font-weight: 800; 
     font-size: 1rem; text-decoration: none; transition: all 0.3s;
-    box-shadow: 0 8px 16px rgba(255, 203, 60, 0.3);
+    box-shadow: 0 8px 16px rgba(255, 203, 60, 0.3); text-align: center;
 }
 .cambly-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(255, 203, 60, 0.4); }
-.cambly-image-side { min-height: 350px; background-size: cover; background-position: center; }
+.cambly-image-side { min-height: 400px; background-size: cover; background-position: center; }
 
-@media (max-width: 900px) {
-    .cambly-banner-card { grid-template-columns: 1fr; }
-    .cambly-image-side { order: -1; min-height: 250px; }
-    .cambly-content { padding: 30px; text-align: center; }
-    .cambly-logo { margin: 0 auto 20px; }
+@media (max-width: 800px) {
+    .cambly-banner-card { grid-template-columns: 1fr; gap: 0; margin: 20px 0; }
+    .cambly-image-side { order: -1; min-height: 220px; border-radius: 0; }
+    .cambly-content { padding: 30px 20px; text-align: center; }
+    .cambly-title { font-size: 1.5rem !important; }
+    .cambly-text { font-size: 0.95rem !important; }
+    .cambly-logo { margin: 0 auto 15px; }
+    .cambly-price-row { justify-content: center; }
 }
 
 /* ── Footer ── */

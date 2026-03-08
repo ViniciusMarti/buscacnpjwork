@@ -14,8 +14,8 @@ from pathlib import Path
 BASE_DIR      = "."
 CNPJ_DIR      = Path("./cnpj")
 LOG_FILE      = "reparo_api.log"
-MAX_WORKERS   = 2 # Mais lento para evitar blocks
-SLEEP_FETCH   = 1.0
+MAX_WORKERS   = 50 # Acelerado conforme pedido do usuário
+SLEEP_FETCH   = 0.1
 API_BRASIL    = "https://brasilapi.com.br/api/cnpj/v1/"
 API_MINHA_REC = "https://minhareceita.org/"
 DOMAIN        = "https://buscacnpj.work"
@@ -183,8 +183,8 @@ def fetch(cnpj):
                 if len(data.keys()) > 5:
                     return data
             if r.status_code == 429: 
-                log.warning("Rate limit atingido. Dormindo 30s...")
-                time.sleep(30)
+                log.warning("Rate limit atingido. Dormido 1s...")
+                time.sleep(1)
         except: pass
     return None
 
@@ -241,9 +241,10 @@ def main():
                 log.info("Progresso: %d/%d | FIX:%d SKIP:%d FAIL:%d ERR:%d", 
                          i, total, counts["FIXED"], counts["SKIP"], counts["API_FAIL"], counts["ERROR"])
             
-            if counts["FIXED"] >= 1000:
-                log.info("Limite de 1000 reparos atingido. Parando por segurança.")
-                break
+            # Limite de 1000 removido para terminar logo
+            # if counts["FIXED"] >= 1000:
+            #     log.info("Limite de 1000 reparos atingido. Parando por segurança.")
+            #     break
             
     log.info("Finalizado: %s", counts)
 
