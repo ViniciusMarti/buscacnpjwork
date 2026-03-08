@@ -102,7 +102,7 @@ try {
         $params[':city'] = $city_filter;
     }
 
-    $query .= " AND capital_social NOT IN (999, 999.99, 9999, 9999.99, 99999, 99999.99, 999999, 999999.99, 9999999, 9999999.99, 99999999, 99999999.99, 999999999, 999999999.99, 9999999999, 9999999999.99) ORDER BY capital_social DESC LIMIT 100";
+    $query .= " AND CAST(capital_social AS INTEGER) NOT LIKE '999%' ORDER BY capital_social DESC LIMIT 100";
     $stmt_ranking = $db->prepare($query);
     $stmt_ranking->execute($params);
     $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);

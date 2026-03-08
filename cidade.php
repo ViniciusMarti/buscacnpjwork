@@ -78,7 +78,7 @@ try {
     }
 
     // 3. Ranking Top 100 da Cidade
-    $stmt_ranking = $db->prepare("SELECT * FROM dados_cnpj WHERE uf = :uf AND municipio = :city AND capital_social NOT IN (999, 999.99, 9999, 9999.99, 99999, 99999.99, 999999, 999999.99, 9999999, 9999999.99, 99999999, 99999999.99, 999999999, 999999999.99, 9999999999, 9999999999.99) ORDER BY capital_social DESC LIMIT 100");
+    $stmt_ranking = $db->prepare("SELECT * FROM dados_cnpj WHERE uf = :uf AND municipio = :city AND CAST(capital_social AS INTEGER) NOT LIKE '999%' ORDER BY capital_social DESC LIMIT 100");
     $stmt_ranking->execute([':uf' => $uf, ':city' => $real_city_name]);
     $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);
 
