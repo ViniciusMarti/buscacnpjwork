@@ -33,6 +33,7 @@ RewriteRule ^cnpj/([0-9]{14})/?$ cnpj.php?cnpj=$1 [L,QSA]
 # --- Roteamento Dinâmico para Rankings ---
 RewriteRule ^rankings/?$ rankings-index.php [L,QSA]
 RewriteRule ^rankings/estado/([a-z0-9-]+)/?$ ranking.php?slug=$1 [L,QSA]
+RewriteRule ^rankings/estado/([a-z0-9-]+)/([a-z0-9-]+)/?$ cidade.php?estado_slug=$1&cidade_slug=$2 [L,QSA]
 
 # --- URLs Limpas ---
 # Redireciona de /index.html para /

@@ -18,7 +18,8 @@ def add_indexes():
         ("idx_municipio", "dados_cnpj(municipio)"),
         ("idx_capital", "dados_cnpj(capital_social DESC)"),
         ("idx_razao", "dados_cnpj(razao_social)"),
-        ("idx_cnpj", "dados_cnpj(cnpj)")
+        ("idx_cnpj", "dados_cnpj(cnpj)"),
+        ("idx_uf_municipio", "dados_cnpj(uf, municipio)")
     ]
 
     for name, target in indexes:

@@ -31,7 +31,8 @@ try {
         "CREATE INDEX IF NOT EXISTS idx_uf ON dados_cnpj(uf);",
         "CREATE INDEX IF NOT EXISTS idx_capital ON dados_cnpj(capital_social DESC);",
         "CREATE INDEX IF NOT EXISTS idx_municipio ON dados_cnpj(municipio);",
-        "CREATE INDEX IF NOT EXISTS idx_razao ON dados_cnpj(razao_social);"
+        "CREATE INDEX IF NOT EXISTS idx_razao ON dados_cnpj(razao_social);",
+        "CREATE INDEX IF NOT EXISTS idx_uf_municipio ON dados_cnpj(uf, municipio);"
     ];
 
     foreach ($queries as $sql) {
