@@ -1,6 +1,7 @@
 <?php
 // Conexão MySQL centralizada
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/utils.php';
 
 $estado_slug = $_GET['estado_slug'] ?? '';
 $cidade_slug = $_GET['cidade_slug'] ?? '';
@@ -37,7 +38,7 @@ if (!$uf) {
 try {
     $db = getDB();
 
-    // Encontrar o nome real da cidade pelo slug
+    // Encontrar o nome real da cidade pelo slug de forma mais eficiente via índice
     $stmt_c = $db->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
     $stmt_c->execute([':uf' => $uf]);
     $real_city_name = '';
@@ -67,9 +68,14 @@ try {
     $capital_total = $total_capital->fetchColumn();
 
     // 2. Panorama da Cidade
-    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND municipio = :city GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
     $stmt_cnae->execute([':uf' => $uf, ':city' => $real_city_name]);
     $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
+    if (!$top_cnae) {
+        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND municipio = :city GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+        $stmt_cnae_alt->execute([':uf' => $uf, ':city' => $real_city_name]);
+        $top_cnae = $stmt_cnae_alt->fetch(PDO::FETCH_ASSOC);
+    }
 
     // 3. Ranking Top 100 da Cidade
     $stmt_ranking = $db->prepare("SELECT * FROM dados_cnpj WHERE uf = :uf AND municipio = :city ORDER BY capital_social DESC LIMIT 100");
@@ -89,8 +95,8 @@ function format_money($val) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Maiores Empresas em <?php echo $real_city_name; ?> (<?php echo $uf; ?>) - Ranking Top 100 | GestãoMax</title>
-    <meta name="description" content="Ranking das 100 maiores empresas de <?php echo $real_city_name; ?>, <?php echo $uf; ?> por capital social. Estatísticas e inteligência de mercado.">
+    <title>Maiores Empresas em <?php echo titleCase($real_city_name); ?> (<?php echo $uf; ?>) - Ranking Top 100 | GestãoMax</title>
+    <meta name="description" content="Ranking das 100 maiores empresas de <?php echo titleCase($real_city_name); ?>, <?php echo $uf; ?> por capital social. Estatísticas e inteligência de mercado.">
     <?php $current_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>
     <link rel="canonical" href="<?php echo $current_url; ?>">
     <link rel="stylesheet" href="/assets/cnpj.css?v=1.7.1">
@@ -101,7 +107,8 @@ function format_money($val) {
         .stat-card { background: white; border-radius: 20px; padding: 32px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: 0.3s; }
         .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
         .stat-card h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--primary); margin-bottom: 12px; }
-        .stat-card .val { font-size: 2rem; font-weight: 900; color: var(--text); }
+        .stat-card .val { font-size: 1.8rem; font-weight: 900; color: var(--text); }
+        .stat-card .val.money { font-size: 1.5rem; }
         
         .panorama-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 24px; }
         .p-item { background: var(--bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border); }
@@ -135,13 +142,13 @@ function format_money($val) {
         <a href="/">Início</a> > 
         <a href="/rankings/">Rankings</a> > 
         <a href="/rankings/estado/<?php echo $estado_slug; ?>/"><?php echo $state_name; ?></a> > 
-        <?php echo $real_city_name; ?>
+        <?php echo titleCase($real_city_name); ?>
     </div>
     
     <header style="padding: 40px 0 20px; text-align: left; border:none; background:none;">
-        <h1 style="font-size: 3rem; margin-bottom:10px;">Maiores Empresas em <?php echo $real_city_name; ?>, <?php echo $uf; ?></h1>
+        <h1 style="font-size: 3rem; margin-bottom:10px;">Maiores Empresas em <?php echo titleCase($real_city_name); ?>, <?php echo $uf; ?></h1>
         <p style="font-weight:700; color:var(--primary); font-size:1.1rem; margin-bottom:12px;">Ranking de Capital Social • As 100 maiores da cidade</p>
-        <p style="color:var(--text-muted); max-width:800px;">Consulte o panorama empresarial de <?php echo $real_city_name; ?>. Dados oficiais baseados no capital social declarado na Receita Federal.</p>
+        <p style="color:var(--text-muted); max-width:800px;">Consulte o panorama empresarial de <?php echo titleCase($real_city_name); ?>. Dados oficiais baseados no capital social declarado na Receita Federal.</p>
     </header>
 
     <div class="stats-grid">
@@ -150,8 +157,8 @@ function format_money($val) {
             <div class="val"><?php echo number_format($count_total, 0, ',', '.'); ?></div>
         </div>
         <div class="stat-card">
-            <h3>Capital Social em <?php echo $real_city_name; ?></h3>
-            <div class="val"><?php echo format_money($capital_total); ?></div>
+            <h3>Capital Social em <?php echo titleCase($real_city_name); ?></h3>
+            <div class="val money"><?php echo format_money_friendly($capital_total); ?></div>
         </div>
     </div>
 

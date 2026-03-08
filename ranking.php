@@ -1,6 +1,7 @@
 <?php
 // Conexão MySQL centralizada
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/utils.php';
 
 $slug = $_GET['slug'] ?? '';
 
@@ -64,9 +65,14 @@ try {
     $concentration_perc = ($count_total > 0) ? ($top_city['c'] / $count_total) * 100 : 0;
 
     // Setores Dominantes
-    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
     $stmt_cnae->execute([':uf' => $uf]);
     $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
+    if (!$top_cnae) {
+        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+        $stmt_cnae_alt->execute([':uf' => $uf]);
+        $top_cnae = $stmt_cnae_alt->fetch(PDO::FETCH_ASSOC);
+    }
 
     // 2.1 Cidades Principais (Top 10 por volume)
     $stmt_cities_top = $db->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
@@ -131,7 +137,8 @@ function format_money($val) {
         .stat-card { background: white; border-radius: 20px; padding: 32px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: 0.3s; }
         .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
         .stat-card h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--primary); margin-bottom: 12px; }
-        .stat-card .val { font-size: 2rem; font-weight: 900; color: var(--text); }
+        .stat-card .val { font-size: 1.8rem; font-weight: 900; color: var(--text); }
+        .stat-card .val.money { font-size: 1.5rem; }
         
         .panorama-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 24px; }
         .p-item { background: var(--bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border); }
@@ -182,7 +189,7 @@ function format_money($val) {
         </div>
         <div class="stat-card">
             <h3>Capital Social Total</h3>
-            <div class="val"><?php echo format_money($capital_total); ?></div>
+            <div class="val money"><?php echo format_money_friendly($capital_total); ?></div>
         </div>
     </div>
 
@@ -198,7 +205,7 @@ function format_money($val) {
         </div>
         <div class="p-item">
             <label>Concentração</label>
-            <div class="v"><?php echo $top_city['municipio']; ?> (<?php echo number_format($concentration_perc, 2, ',', '.'); ?>%)</div>
+            <div class="v"><?php echo titleCase($top_city['municipio']); ?> (<?php echo number_format($concentration_perc, 2, ',', '.'); ?>%)</div>
         </div>
         <div class="p-item">
             <label>Setor Principal</label>
@@ -219,7 +226,7 @@ function format_money($val) {
         ?>
         <a href="/rankings/estado/<?php echo $slug; ?>/<?php echo $city_slug; ?>/" class="state-card">
             <div>
-                <span><?php echo $city['municipio']; ?></span>
+                <span><?php echo titleCase($city['municipio']); ?></span>
                 <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 500;"><?php echo number_format($city['total'], 0, ',', '.'); ?> empresas</div>
             </div>
             <span class="arrow">→</span>
@@ -272,7 +279,7 @@ function format_money($val) {
                         <a href="/cnpj/<?php echo $emp['cnpj']; ?>/" class="name"><?php echo $emp['razao_social']; ?></a>
                         <span class="cnpj"><?php echo $emp['cnpj']; ?></span>
                     </td>
-                    <td><?php echo $emp['municipio']; ?></td>
+                    <td><?php echo titleCase($emp['municipio']); ?></td>
                     <td><span class="badge <?php echo ($emp['situacao']=='ATIVA'?'ba':'bo'); ?>" style="scale: 0.8; margin-bottom:0;"><?php echo $emp['situacao']; ?></span></td>
                     <td style="font-weight:700;"><?php echo format_money($emp['capital_social']); ?></td>
                 </tr>
