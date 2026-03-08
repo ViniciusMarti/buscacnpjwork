@@ -48,7 +48,7 @@ function format_money($val) {
     <title>Rankings de Empresas por Estado - Relatórios e Estatísticas | BuscaCNPJ Grátis</title>
     <meta name="description" content="Explore rankings das maiores empresas do Brasil por estado. Inteligência de mercado, panorama empresarial e estatísticas atualizadas.">
     <link rel="canonical" href="https://buscacnpjgratis.com.br/rankings/">
-    <link rel="stylesheet" href="/assets/cnpj.css?v=1.7.1">
+    <link rel="stylesheet" href="/assets/cnpj.css?v=<?php echo filemtime(__DIR__ . '/assets/cnpj.css'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         .rankings-hub { background: var(--bg); }

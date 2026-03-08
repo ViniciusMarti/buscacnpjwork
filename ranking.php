@@ -130,7 +130,7 @@ function format_money($val) {
     <meta name="description" content="Descubra quais são as 100 maiores empresas <?php echo $prep . ' ' . $state_name; ?>. Lista atualizada, setores dominantes e dados empresariais detalhados.">
     <?php $current_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>
     <link rel="canonical" href="<?php echo $current_url; ?>">
-    <link rel="stylesheet" href="/assets/cnpj.css?v=1.7.1">
+    <link rel="stylesheet" href="/assets/cnpj.css?v=<?php echo filemtime(__DIR__ . '/assets/cnpj.css'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         .ranking-page { background: var(--bg); }

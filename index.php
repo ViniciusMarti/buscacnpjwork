@@ -15,7 +15,7 @@ $display_count = number_format($total_cnpjs, 0, ',', '.');
     <link rel="canonical" href="<?php echo $current_url; ?>">
     
     <!-- CSS & Fonts -->
-    <link rel="stylesheet" href="/assets/cnpj.css?v=1.7.1">
+    <link rel="stylesheet" href="/assets/cnpj.css?v=<?php echo filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/cnpj.css'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
