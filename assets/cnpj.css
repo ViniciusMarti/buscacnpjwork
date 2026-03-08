@@ -270,7 +270,7 @@ nav a:hover { color: var(--primary); }
 }
 
 /* ── Novo Banner Cambly da ViniciusCodes ── */
-.promo-banner { background: linear-gradient(135deg, var(--surface), var(--bg)); border: 1px solid var(--border); border-radius: 20px; margin: 40px 0 64px; display: grid; grid-template-columns: 1.2fr 0.8fr; box-shadow: var(--shadow-sm); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; font-family: 'Inter', sans-serif; }
+.promo-banner { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; border-radius: 20px; margin: 40px 0 64px; display: grid; grid-template-columns: 1.2fr 0.8fr; box-shadow: var(--shadow-sm); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; font-family: 'Inter', sans-serif; }
 .promo-banner:hover { box-shadow: var(--shadow-md); border-color: var(--border-focus); transform: translateY(-2px); }
 .promo-content { padding: 40px; display: flex; flex-direction: column; justify-content: center; }
 .promo-image { background-image: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; min-height: 300px; }
@@ -285,7 +285,10 @@ nav a:hover { color: var(--primary); }
 .promo-price .badge { background: #fee2e2; color: #b91c1c; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 100px; margin-left: 8px; }
 .promo-cta { background: #fca311; color: #111; text-decoration: none; padding: 16px 32px; border-radius: 100px; font-weight: 700; transition: all 0.3s; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 10px; width: fit-content; border: none; cursor: pointer; }
 .promo-cta:hover { transform: scale(1.02); background: #f59e0b; }
-@media (prefers-color-scheme: dark) { .promo-price .badge { background: rgba(239, 68, 68, 0.2); color: #fca5a5; } }
+@media (prefers-color-scheme: dark) { 
+    .promo-price .badge { background: rgba(239, 68, 68, 0.2); color: #fca5a5; } 
+    .promo-banner { background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.15)); border-color: rgba(245, 158, 11, 0.2); }
+}
 @media (max-width: 768px) { 
     .promo-banner { grid-template-columns: 1fr; margin: 32px 0; border-radius: 16px; }
     .promo-image { order: -1; min-height: 180px; }
