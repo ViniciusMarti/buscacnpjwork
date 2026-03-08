@@ -172,7 +172,7 @@ function format_money($val) {
 </header>
 
 <div class="page-wrap fade-up">
-    <div class="bc"><a href="/">Início</a> › Rankings › Por estado › <?php echo $state_name; ?></div>
+    <div class="bc"><a href="/">Início</a> > <a href="/rankings/">Rankings</a> > <?php echo $state_name; ?></div>
     
     <header style="padding: 40px 0 20px; text-align: left; border:none; background:none;">
         <h1 style="font-size: 3rem; margin-bottom:10px;">Maiores Empresas em <?php echo $state_name; ?></h1>
