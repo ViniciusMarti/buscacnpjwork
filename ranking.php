@@ -43,39 +43,39 @@ try {
     $db = getDB();
 
     // 1. Stats Gerais
-    $total_companies = $db->prepare("SELECT COUNT(*) FROM dados_cnpj WHERE uf = :uf");
+    $total_companies = $db->prepare("SELECT COUNT(*) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf");
     $total_companies->execute([':uf' => $uf]);
     $count_total = $total_companies->fetchColumn();
 
-    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM dados_cnpj WHERE uf = :uf");
+    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf");
     $total_capital->execute([':uf' => $uf]);
     $capital_total = $total_capital->fetchColumn();
 
     // 2. Panorama
     // Idade Média (aproximada pela data de abertura)
     // Para SQLite: strftime('%Y', 'now') - strftime('%Y', data_abertura)
-    $stmt_age = $db->prepare("SELECT AVG(strftime('%Y', 'now') - strftime('%Y', substr(data_abertura,1,10))) FROM dados_cnpj WHERE uf = :uf AND data_abertura != ''");
+    $stmt_age = $db->prepare("SELECT AVG(strftime('%Y', 'now') - strftime('%Y', substr(data_abertura,1,10))) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND data_abertura != ''");
     $stmt_age->execute([':uf' => $uf]);
     $avg_age = round($stmt_age->fetchColumn() ?: 0);
 
     // Concentração
-    $stmt_city = $db->prepare("SELECT municipio, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf GROUP BY municipio ORDER BY c DESC LIMIT 1");
+    $stmt_city = $db->prepare("SELECT municipio, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY c DESC LIMIT 1");
     $stmt_city->execute([':uf' => $uf]);
     $top_city = $stmt_city->fetch(PDO::FETCH_ASSOC);
     $concentration_perc = ($count_total > 0) ? ($top_city['c'] / $count_total) * 100 : 0;
 
     // Setores Dominantes
-    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
     $stmt_cnae->execute([':uf' => $uf]);
     $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
     if (!$top_cnae) {
-        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
         $stmt_cnae_alt->execute([':uf' => $uf]);
         $top_cnae = $stmt_cnae_alt->fetch(PDO::FETCH_ASSOC);
     }
 
     // 2.1 Cidades Principais (Top 10 por volume)
-    $stmt_cities_top = $db->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+    $stmt_cities_top = $db->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
     $stmt_cities_top->execute([':uf' => $uf]);
     $top_cities_list = $stmt_cities_top->fetchAll(PDO::FETCH_ASSOC);
 
@@ -102,7 +102,7 @@ try {
         $params[':city'] = $city_filter;
     }
 
-    $query .= " AND CAST(capital_social AS INTEGER) NOT LIKE '999%' ORDER BY capital_social DESC LIMIT 100";
+    $query .= " ORDER BY capital_social DESC LIMIT 100";
     $stmt_ranking = $db->prepare($query);
     $stmt_ranking->execute($params);
     $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);

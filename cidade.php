@@ -59,26 +59,26 @@ try {
     }
 
     // 1. Stats Gerais da Cidade
-    $total_companies = $db->prepare("SELECT COUNT(*) FROM dados_cnpj WHERE uf = :uf AND municipio = :city");
+    $total_companies = $db->prepare("SELECT COUNT(*) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city");
     $total_companies->execute([':uf' => $uf, ':city' => $real_city_name]);
     $count_total = $total_companies->fetchColumn();
 
-    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM dados_cnpj WHERE uf = :uf AND municipio = :city");
+    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city");
     $total_capital->execute([':uf' => $uf, ':city' => $real_city_name]);
     $capital_total = $total_capital->fetchColumn();
 
     // 2. Panorama da Cidade
-    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
     $stmt_cnae->execute([':uf' => $uf, ':city' => $real_city_name]);
     $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
     if (!$top_cnae) {
-        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE uf = :uf AND municipio = :city GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
         $stmt_cnae_alt->execute([':uf' => $uf, ':city' => $real_city_name]);
         $top_cnae = $stmt_cnae_alt->fetch(PDO::FETCH_ASSOC);
     }
 
     // 3. Ranking Top 100 da Cidade
-    $stmt_ranking = $db->prepare("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city AND CAST(capital_social AS INTEGER) NOT LIKE '999%' ORDER BY capital_social DESC LIMIT 100");
+    $stmt_ranking = $db->prepare("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city ORDER BY capital_social DESC LIMIT 100");
     $stmt_ranking->execute([':uf' => $uf, ':city' => $real_city_name]);
     $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);
 

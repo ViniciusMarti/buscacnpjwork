@@ -10,7 +10,7 @@ try {
     $db = getDB();
     
     // Top Indústrias do país (busca otimizada rápida pelas maiores)
-    $stmt = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 AND CAST(capital_social AS INTEGER) NOT LIKE '999%' AND cnae_principal_descricao LIKE '%Fabrica%' ORDER BY capital_social DESC LIMIT 10");
+    $stmt = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 AND cnae_principal_descricao LIKE '%Fabrica%' ORDER BY capital_social DESC LIMIT 10");
     $top_industrias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Exception $e) {
