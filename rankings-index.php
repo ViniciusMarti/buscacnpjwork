@@ -8,17 +8,29 @@ require_once __DIR__ . '/config/db.php';
 try {
     $db = getDB();
     
-    // Otimização: Valores nacionais fixos (ou vindos de uma tabela de meta)
-    // Evita ler 17GB para somar capital social a cada visita.
+    // Configurações do Cache
+    $cache_dir = __DIR__ . '/cache/rankings';
+    if (!is_dir($cache_dir)) mkdir($cache_dir, 0755, true);
+    $cache_file = $cache_dir . '/stats_brazil.json';
+    $cache_time = 86400 * 7; // 7 dias
+
+    $top_br = null;
+    if (file_exists($cache_file) && (time() - filemtime($cache_file) < $cache_time)) {
+        $top_br = json_decode(file_get_contents($cache_file), true);
+    }
+
+    if (!$top_br) {
+        // Pegar top 10 maiores empresas do Brasil (Geral)
+        $stmt_top = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 ORDER BY capital_social DESC LIMIT 10");
+        $top_br = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
+        file_put_contents($cache_file, json_encode($top_br));
+    }
+
+    // Otimização: Valores nacionais fixos
     $br_stats = [
         't' => 55843210, 
         's' => 45890234120.00
     ];
-    
-    // Pegar top 10 maiores empresas do Brasil (Geral)
-    // Isso é RÁPIDO se houver índice em capital_social
-    $stmt_top = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 ORDER BY capital_social DESC LIMIT 10");
-    $top_br = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     // Fallback silencioso para erros
