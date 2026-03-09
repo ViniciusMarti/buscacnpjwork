@@ -26,46 +26,48 @@ foreach ($states as $slug => $uf) {
     $start_state = microtime(true);
 
     try {
-        // 1. Contagens Principais
-        $stmt_main = $db->prepare("
+        // 1. Contagens Principais (Agregado de todos os bancos)
+        $main_data = aggregateDistributed("
             SELECT 
                 COUNT(*) as total_count, 
                 SUM(capital_social) as total_capital
             FROM dados_cnpj 
             WHERE situacao = 'ATIVA' AND uf = :uf
-        ");
-        $stmt_main->execute([':uf' => $uf]);
-        $main_data = $stmt_main->fetch(PDO::FETCH_ASSOC);
+        ", [':uf' => $uf]);
 
         $count_total = $main_data['total_count'] ?: 0;
         $capital_total = $main_data['total_capital'] ?: 0;
 
-        // 2. Top Cidades
-        $stmt_cities_top = $db->prepare("
-            SELECT municipio, COUNT(*) as total 
-            FROM dados_cnpj 
-            WHERE situacao = 'ATIVA' AND uf = :uf 
-            GROUP BY municipio 
-            ORDER BY total DESC 
-            LIMIT 10
-        ");
-        $stmt_cities_top->execute([':uf' => $uf]);
-        $top_cities_list = $stmt_cities_top->fetchAll(PDO::FETCH_ASSOC);
+        // 2. Top Cidades (Merge e Agregação)
+        $city_map = [];
+        foreach (getAllConnections() as $db_conn) {
+            $stmt = $db_conn->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+            $stmt->execute([':uf' => $uf]);
+            foreach ($stmt->fetchAll() as $r) {
+                $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
+            }
+        }
+        arsort($city_map);
+        $top_cities_list = [];
+        foreach (array_slice($city_map, 0, 10, true) as $m => $t) {
+            $top_cities_list[] = ['municipio' => $m, 'total' => $t];
+        }
         
         $top_city = !empty($top_cities_list) ? $top_cities_list[0] : ['municipio' => 'Nenhum', 'total' => 0];
         $concentration_perc = ($count_total > 0) ? ($top_city['total'] / $count_total) * 100 : 0;
 
-        // 3. Setor Dominante
-        $stmt_cnae = $db->prepare("
-            SELECT cnae_principal_descricao, COUNT(*) as c 
-            FROM dados_cnpj 
-            WHERE situacao = 'ATIVA' AND uf = :uf 
-            AND cnae_principal_descricao NOT LIKE 'Consulte%' 
-            GROUP BY cnae_principal_descricao 
-            ORDER BY c DESC LIMIT 1
-        ");
-        $stmt_cnae->execute([':uf' => $uf]);
-        $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC) ?: ['cnae_principal_descricao' => 'Nenhum', 'c' => 0];
+        // 3. Setor Dominante (Agregado)
+        $cnae_map = [];
+        foreach (getAllConnections() as $db_conn) {
+            $stmt = $db_conn->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+            $stmt->execute([':uf' => $uf]);
+            $r = $stmt->fetch();
+            if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
+        }
+        arsort($cnae_map);
+        $top_cnae_name = !empty($cnae_map) ? key($cnae_map) : 'Nenhum';
+        $top_cnae = ['cnae_principal_descricao' => $top_cnae_name, 'c' => $cnae_map[$top_cnae_name] ?? 0];
+
 
         $stats = [
             'count_total' => $count_total,
@@ -93,8 +95,9 @@ foreach ($states as $slug => $uf) {
 echo "Processando Ranking Nacional (Brasil)... ";
 try {
     $start_br = microtime(true);
-    $stmt_top = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 ORDER BY capital_social DESC LIMIT 10");
-    $top_br = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
+    // Busca as 10 maiores do Brasil em todos os bancos
+    $top_br = fetchAllDistributed("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0", [], 'capital_social', 'DESC', 10);
+
     
     $cache_file_br = $cache_dir . '/stats_brazil.json';
     file_put_contents($cache_file_br, json_encode($top_br));

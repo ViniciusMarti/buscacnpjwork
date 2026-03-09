@@ -14,12 +14,12 @@ if (!is_dir($cache_dir)) {
 }
 
 try {
-    $db = getDB();
-    echo "Consultando total de empresas no MySQL...\n";
+    echo "Consultando total de empresas em todos os bancos MySQL...\n";
     
-    // Consulta real (pode demorar alguns segundos, por isso rodamos via script de cache)
-    $stmt = $db->query("SELECT COUNT(*) FROM dados_cnpj");
-    $total = $stmt->fetchColumn();
+    // Consulta real agregada
+    $res = aggregateDistributed("SELECT COUNT(*) as total FROM dados_cnpj", []);
+    $total = $res['total'] ?: 0;
+
 
     if ($total > 0) {
         file_put_contents($cache_file, $total);

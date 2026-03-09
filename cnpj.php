@@ -12,20 +12,17 @@ if (strlen($cnpj) !== 14) {
 }
 
 try {
-    $db = getDB();
-
-    $stmt = $db->prepare("SELECT * FROM dados_cnpj WHERE cnpj = :cnpj");
-    $stmt->execute([':cnpj' => $cnpj]);
-    $data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $data = fetchCNPJ($cnpj);
 
     if (!$data) {
         header("HTTP/1.0 404 Not Found");
         include('404-cnpj.php');
         die();
     }
-} catch (PDOException $e) {
-    die("Erro ao conectar com o banco de dados: " . $e->getMessage());
+} catch (Exception $e) {
+    die("Erro ao consultar os bancos de dados: " . $e->getMessage());
 }
+
 
 // Funções de formatação
 function format_cnpj($cnpj) {
@@ -163,23 +160,34 @@ $outras_unidades = [];
 $dados_matriz = null;
 
 try {
+    $connections = getAllConnections();
     if ($is_matriz) {
         // Busca filiais ATIVAS (limitado para performance e UX)
-        $stmt_unidades = $db->prepare("SELECT cnpj, municipio, uf FROM dados_cnpj WHERE cnpj LIKE :base AND cnpj != :atual AND situacao = 'ATIVA' LIMIT 50");
-        $stmt_unidades->execute([':base' => $cnpj_base . '%', ':atual' => $cnpj]);
-        $outras_unidades = $stmt_unidades->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($connections as $db) {
+            $stmt_unidades = $db->prepare("SELECT cnpj, municipio, uf FROM dados_cnpj WHERE cnpj LIKE :base AND cnpj != :atual AND situacao = 'ATIVA' LIMIT 50");
+            $stmt_unidades->execute([':base' => $cnpj_base . '%', ':atual' => $cnpj]);
+            $res = $stmt_unidades->fetchAll(PDO::FETCH_ASSOC);
+            if ($res) {
+                $outras_unidades = array_merge($outras_unidades, $res);
+            }
+            if (count($outras_unidades) >= 50) {
+                $outras_unidades = array_slice($outras_unidades, 0, 50);
+                break;
+            }
+        }
     } else {
         // Busca a Matriz
-        $stmt_matriz = $db->prepare("SELECT cnpj, municipio, uf FROM dados_cnpj WHERE cnpj = :matriz_cnpj LIMIT 1");
-        $stmt_matriz->execute([':matriz_cnpj' => $cnpj_base . '0001' . substr($cnpj, 12, 2)]); // Simplificado para bater o dígito se possível ou buscar pela base
-        // Nota: O dígito verificador da matriz pode mudar, o ideal é buscar apenas pelos 8 digitos + 0001
-        $stmt_matriz = $db->prepare("SELECT cnpj, municipio, uf FROM dados_cnpj WHERE cnpj LIKE :matriz_padrao LIMIT 1");
-        $stmt_matriz->execute([':matriz_padrao' => $cnpj_base . '0001%']);
-        $dados_matriz = $stmt_matriz->fetch(PDO::FETCH_ASSOC);
+        foreach ($connections as $db) {
+            $stmt_matriz = $db->prepare("SELECT cnpj, municipio, uf FROM dados_cnpj WHERE cnpj LIKE :matriz_padrao LIMIT 1");
+            $stmt_matriz->execute([':matriz_padrao' => $cnpj_base . '0001%']);
+            $dados_matriz = $stmt_matriz->fetch(PDO::FETCH_ASSOC);
+            if ($dados_matriz) break;
+        }
     }
-} catch (PDOException $e) {
+} catch (Exception $e) {
     // Silencioso
 }
+
 
 // CNAE Details Lookup - Atualiza a descrição com base no novo banco
 if (isset($data['cnae_principal_codigo']) && !empty($data['cnae_principal_codigo'])) {

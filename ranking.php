@@ -59,49 +59,50 @@ try {
     if (!$stats) {
         // OTIMIZAÇÃO: Agrupa as contagens principais em uma única leitura (Single Scan)
         // Removida a média de idade complexa do SQL para evitar lentidão extrema em estados grandes
-        $stmt_main = $db->prepare("
+        // OTIMIZAÇÃO: Agrupa as contagens principais (Agregado de todos os bancos)
+        $main_data = aggregateDistributed("
             SELECT 
                 COUNT(*) as total_count, 
                 SUM(capital_social) as total_capital
             FROM dados_cnpj 
             WHERE situacao = 'ATIVA' AND uf = :uf
-        ");
-        $stmt_main->execute([':uf' => $uf]);
-        $main_data = $stmt_main->fetch(PDO::FETCH_ASSOC);
+        ", [':uf' => $uf]);
 
         $count_total = $main_data['total_count'] ?: 0;
         $capital_total = $main_data['total_capital'] ?: 0;
         
-        // Média de idade simplificada (Apenas uma estimativa se for muito lento no SQL)
-        $avg_age = 12; // Valor default rápido caso o cálculo falhe ou seja pulado
+        $avg_age = 12;
 
-
-        // OTIMIZAÇÃO: Busca o top 10 cidades de uma vez
-        $stmt_cities_top = $db->prepare("
-            SELECT municipio, COUNT(*) as total 
-            FROM dados_cnpj 
-            WHERE situacao = 'ATIVA' AND uf = :uf 
-            GROUP BY municipio 
-            ORDER BY total DESC 
-            LIMIT 10
-        ");
-        $stmt_cities_top->execute([':uf' => $uf]);
-        $top_cities_list = $stmt_cities_top->fetchAll(PDO::FETCH_ASSOC);
+        // OTIMIZAÇÃO: Busca o top 10 cidades (Agregado de todos os bancos)
+        $city_map = [];
+        foreach (getAllConnections() as $db) {
+            $stmt = $db->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+            $stmt->execute([':uf' => $uf]);
+            foreach ($stmt->fetchAll() as $r) {
+                $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
+            }
+        }
+        arsort($city_map);
+        $top_cities_list = [];
+        foreach (array_slice($city_map, 0, 10, true) as $m => $t) {
+            $top_cities_list[] = ['municipio' => $m, 'total' => $t];
+        }
         
-        $top_city = !empty($top_cities_list) ? $top_cities_list[0] : ['municipio' => 'Nenhum', 'c' => 0];
+        $top_city = !empty($top_cities_list) ? $top_cities_list[0] : ['municipio' => 'Nenhum', 'total' => 0];
         $concentration_perc = ($count_total > 0) ? ($top_city['total'] / $count_total) * 100 : 0;
 
-        // OTIMIZAÇÃO: Busca o setor dominante
-        $stmt_cnae = $db->prepare("
-            SELECT cnae_principal_descricao, COUNT(*) as c 
-            FROM dados_cnpj 
-            WHERE situacao = 'ATIVA' AND uf = :uf 
-            AND cnae_principal_descricao NOT LIKE 'Consulte%' 
-            GROUP BY cnae_principal_descricao 
-            ORDER BY c DESC LIMIT 1
-        ");
-        $stmt_cnae->execute([':uf' => $uf]);
-        $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC) ?: ['cnae_principal_descricao' => 'Nenhum', 'c' => 0];
+        // OTIMIZAÇÃO: Busca o setor dominante (Agregado)
+        $cnae_map = [];
+        foreach (getAllConnections() as $db) {
+            $stmt = $db->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+            $stmt->execute([':uf' => $uf]);
+            $r = $stmt->fetch();
+            if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
+        }
+        arsort($cnae_map);
+        $top_cnae_name = !empty($cnae_map) ? key($cnae_map) : 'Nenhum';
+        $top_cnae = ['cnae_principal_descricao' => $top_cnae_name, 'c' => $cnae_map[$top_cnae_name] ?? 0];
+
 
         $stats = [
             'count_total' => $count_total,
@@ -131,8 +132,7 @@ try {
     $br_total = 55843210;
     $participation = ($br_total > 0) ? ($count_total / $br_total) * 100 : 0;
 
-    // --- LISTAGEM DO RANKING (FILTRADA) ---
-    // Esta parte é rápida pois tem LIMIT 100 e usa o índice idx_capital ou idx_uf
+    // --- LISTAGEM DO RANKING (FILTRADA E DISTRIBUÍDA) ---
     $query = "SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf";
     $params = [':uf' => $uf];
 
@@ -149,10 +149,8 @@ try {
         $params[':city'] = $city_filter;
     }
 
-    $query .= " ORDER BY capital_social DESC LIMIT 100";
-    $stmt_ranking = $db->prepare($query);
-    $stmt_ranking->execute($params);
-    $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);
+    $ranking = fetchAllDistributed($query, $params, 'capital_social', 'DESC', 100);
+
 
     // Dropdowns (Usando as cidades já cacheadas do Top 10)
     $cities = array_column($top_cities_list, 'municipio');

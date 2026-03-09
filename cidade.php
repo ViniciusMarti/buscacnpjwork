@@ -39,48 +39,52 @@ try {
     $db = getDB();
 
     // Encontrar o nome real da cidade pelo slug de forma mais eficiente via índice
-    $stmt_c = $db->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
-    $stmt_c->execute([':uf' => $uf]);
     $real_city_name = '';
-    
-    while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
-        $name = $row['municipio'];
-        $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
-        $s = preg_replace('/[^a-z0-9-]/', '', $s);
-        if ($s === $cidade_slug) {
-            $real_city_name = $name;
-            break;
+    foreach (getAllConnections() as $db) {
+        $stmt_c = $db->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
+        $stmt_c->execute([':uf' => $uf]);
+        
+        while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
+            $name = $row['municipio'];
+            $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
+            $s = preg_replace('/[^a-z0-9-]/', '', $s);
+            if ($s === $cidade_slug) {
+                $real_city_name = $name;
+                break 2; // Sai do while e do foreach
+            }
         }
     }
+
 
     if (!$real_city_name) {
         header("HTTP/1.0 404 Not Found");
         die("<h1>Cidade não encontrada neste estado</h1>");
     }
 
-    // 1. Stats Gerais da Cidade
-    $total_companies = $db->prepare("SELECT COUNT(*) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city");
-    $total_companies->execute([':uf' => $uf, ':city' => $real_city_name]);
-    $count_total = $total_companies->fetchColumn();
+    // 1. Stats Gerais da Cidade (Distribuído)
+    $stats_cid = aggregateDistributed("
+        SELECT COUNT(*) as count_total, SUM(capital_social) as capital_total 
+        FROM dados_cnpj 
+        WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city
+    ", [':uf' => $uf, ':city' => $real_city_name]);
 
-    $total_capital = $db->prepare("SELECT SUM(capital_social) FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city");
-    $total_capital->execute([':uf' => $uf, ':city' => $real_city_name]);
-    $capital_total = $total_capital->fetchColumn();
+    $count_total = $stats_cid['count_total'] ?: 0;
+    $capital_total = $stats_cid['capital_total'] ?: 0;
 
-    // 2. Panorama da Cidade
-    $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
-    $stmt_cnae->execute([':uf' => $uf, ':city' => $real_city_name]);
-    $top_cnae = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
-    if (!$top_cnae) {
-        $stmt_cnae_alt = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
-        $stmt_cnae_alt->execute([':uf' => $uf, ':city' => $real_city_name]);
-        $top_cnae = $stmt_cnae_alt->fetch(PDO::FETCH_ASSOC);
+    // 2. Panorama da Cidade (Top CNAE Distribuído)
+    $cnae_map = [];
+    foreach (getAllConnections() as $db) {
+        $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+        $stmt_cnae->execute([':uf' => $uf, ':city' => $real_city_name]);
+        $r = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
+        if ($r) $cnae_map[$r['cnae_principal_descricao']] = ($cnae_map[$r['cnae_principal_descricao']] ?? 0) + $r['c'];
     }
+    arsort($cnae_map);
+    $top_cnae = !empty($cnae_map) ? ['cnae_principal_descricao' => key($cnae_map), 'c' => current($cnae_map)] : null;
 
-    // 3. Ranking Top 100 da Cidade
-    $stmt_ranking = $db->prepare("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city ORDER BY capital_social DESC LIMIT 100");
-    $stmt_ranking->execute([':uf' => $uf, ':city' => $real_city_name]);
-    $ranking = $stmt_ranking->fetchAll(PDO::FETCH_ASSOC);
+    // 3. Ranking Top 100 da Cidade (Distribuído)
+    $ranking = fetchAllDistributed("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city", [':uf' => $uf, ':city' => $real_city_name], 'capital_social', 'DESC', 100);
+
 
 } catch (PDOException $e) {
     die("Erro no banco de dados.");

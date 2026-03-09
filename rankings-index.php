@@ -22,11 +22,11 @@ try {
     }
 
     if (!$top_br) {
-        // Pegar top 10 maiores empresas do Brasil (Geral)
-        $stmt_top = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 ORDER BY capital_social DESC LIMIT 10");
-        $top_br = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
+        // Pegar top 10 maiores empresas do Brasil (Geral) - Busca Distribuída
+        $top_br = fetchAllDistributed("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0", [], 'capital_social', 'DESC', 10);
         file_put_contents($cache_file, json_encode($top_br));
     }
+
 
     // Otimização: Valores nacionais fixos
     $br_stats = [
