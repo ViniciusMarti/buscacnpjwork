@@ -1,7 +1,11 @@
 <?php
-// Otimização: Evitar COUNT(*) em tabela de 17GB a cada load. 
-// Usamos um valor aproximado da base para performance instantânea.
-$total_cnpjs = 55843210; 
+// Otimização: Evitar COUNT(*) pesado. Lemos de um cache atualizado via script.
+$cache_file = __DIR__ . '/cache/total_empresas.txt';
+if (file_exists($cache_file)) {
+    $total_cnpjs = (int)file_get_contents($cache_file);
+} else {
+    $total_cnpjs = 55843210; // Fallback caso o cache ainda não exista
+}
 $display_count = number_format($total_cnpjs, 0, ',', '.');
 ?>
 <!DOCTYPE html>
