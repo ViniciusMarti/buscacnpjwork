@@ -89,4 +89,20 @@ foreach ($states as $slug => $uf) {
     }
 }
 
-echo "\nFIM! Cache gerado com sucesso.\n";
+// --- NOVO: GERAR CACHE NACIONAL (TOP 10 BRASIL) ---
+echo "Processando Ranking Nacional (Brasil)... ";
+try {
+    $start_br = microtime(true);
+    $stmt_top = $db->query("SELECT * FROM dados_cnpj WHERE situacao = 'ATIVA' AND capital_social > 0 ORDER BY capital_social DESC LIMIT 10");
+    $top_br = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
+    
+    $cache_file_br = $cache_dir . '/stats_brazil.json';
+    file_put_contents($cache_file_br, json_encode($top_br));
+    
+    $end_br = microtime(true);
+    echo "OK (" . round($end_br - $start_br, 2) . "s)\n";
+} catch (Exception $e) {
+    echo "ERRO NACIONAL: " . $e->getMessage() . "\n";
+}
+
+echo "\nFIM! Cache (Estados + Brasil) gerado com sucesso.\n";
