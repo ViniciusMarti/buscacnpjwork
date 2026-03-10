@@ -38,23 +38,34 @@ if (!$uf) {
 try {
     $db = getDB();
 
-    // Encontrar o nome real da cidade pelo slug de forma mais eficiente via índice
+    // Encontrar o nome real da cidade pelo slug de forma mais eficiente
     $real_city_name = '';
-    foreach (getAllConnections() as $db) {
-        $stmt_c = $db->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
-        $stmt_c->execute([':uf' => $uf]);
-        
-        while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
-            $name = $row['municipio'];
-            $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
-            $s = preg_replace('/[^a-z0-9-]/', '', $s);
-            if ($s === $cidade_slug) {
-                $real_city_name = $name;
-                break 2; // Sai do while e do foreach
+    
+    // Tentar primeiro pelo cache pré-aquecido (instantâneo)
+    $cache_file = __DIR__ . '/cache/cidades/' . strtolower($uf) . '_' . $cidade_slug . '.json';
+    if (file_exists($cache_file)) {
+        $cache_data = json_decode(file_get_contents($cache_file), true);
+        $real_city_name = $cache_data['nome_real'] ?? '';
+    }
+
+    // Fallback: Busca via banco de dados (lento, apenas se o cache falhar)
+    if (!$real_city_name) {
+        foreach (getAllConnections() as $db_conn) {
+            $stmt_c = $db_conn->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
+            $stmt_c->execute([':uf' => $uf]);
+            
+            while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
+                $name = $row['municipio'];
+                // Normalização p/ conferir slug (mesma lógica do pre_aquecer)
+                $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
+                $s = preg_replace('/[^a-z0-9-]/', '', $s);
+                if ($s === $cidade_slug) {
+                    $real_city_name = $name;
+                    break 2; // Sai do while e do foreach
+                }
             }
         }
     }
-
 
     if (!$real_city_name) {
         header("HTTP/1.0 404 Not Found");
