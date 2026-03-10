@@ -1,17 +1,16 @@
 <?php
 // Configuração centralizada do banco de dados MySQL
 define('DB_HOST', 'localhost');
-define('DB_USER', 'u501810552_buscacnpj');
-define('DB_PASS', 'qPMwBp#WW*BN6k');
+define('DB_USER', 'u582732852_buscacnpj1'); // Usuário padrão (usado em conexões simples)
+define('DB_PASS', 'qPMwBp#WW*BN6k');     // Senha atual (manter até que o usuário informe outra)
 
 // Lista de bancos de dados disponíveis devido a limitações de tamanho
 $DB_NAMES = [
-    'u501810552_buscacnpj',
-    'u501810552_buscacnpj2',
-    'u501810552_buscacnpj3',
-    'u501810552_buscacnpj4',
-    'u501810552_buscacnpj5',
-    'u501810552_buscacnpj6'
+    'u582732852_buscacnpj1',
+    'u582732852_buscacnpj2',
+    'u582732852_buscacnpj3',
+    'u582732852_buscacnpj4',
+    'u582732852_buscacnpj5'
 ];
 
 /**
@@ -29,7 +28,8 @@ function getAllConnections(): array {
         foreach ($DB_NAMES as $dbName) {
             try {
                 $dsn = "mysql:host=" . DB_HOST . ";dbname=" . $dbName . ";charset=utf8mb4";
-                $connections[$dbName] = new PDO($dsn, DB_USER, DB_PASS, $options);
+                // No Hostinger (u582732852), o nome do usuário costuma ser idêntico ao nome do banco
+                $connections[$dbName] = new PDO($dsn, $dbName, DB_PASS, $options);
             } catch (PDOException $e) {
                 // Log de erro silencioso para não quebrar o site se um banco cair
                 error_log("Erro ao conectar ao banco $dbName: " . $e->getMessage());
