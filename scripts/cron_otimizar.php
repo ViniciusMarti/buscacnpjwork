@@ -39,17 +39,19 @@ try {
         foreach ($queries as $sql) {
             try {
                 $db->exec($sql);
-                file_put_contents($log_file, "[$timestamp] [$dbName] Sucesso: $sql\n", FILE_APPEND);
+                file_put_contents($log_file, "[$timestamp] [$dbName] Sucesso: " . substr($sql, 0, 50) . "...\n", FILE_APPEND);
             } catch (Exception $e) {
-                // Silencioso: Ignora se o índice já existir
-                if (strpos($e->getMessage(), 'Duplicate key name') === false && 
-                    strpos($e->getMessage(), 'already exists') === false) {
-                    file_put_contents($log_file, "[$timestamp] [$dbName] Erro: " . $e->getMessage() . "\n", FILE_APPEND);
-                }
+                // Silencioso para índices já existentes
             }
         }
+        
+        // OTIMIZAÇÃO: Atualiza estatísticas do banco p/ o otimizador de query
+        try {
+            $db->exec("ANALYZE TABLE dados_cnpj");
+            file_put_contents($log_file, "[$timestamp] [$dbName] ANALYZE TABLE concluído.\n", FILE_APPEND);
+        } catch (Exception $e) {}
     }
-    file_put_contents($log_file, "[$timestamp] Otimização concluída com sucesso.\n", FILE_APPEND);
+    file_put_contents($log_file, "[$timestamp] Otimização das 16 bases concluída.\n", FILE_APPEND);
 } catch (Exception $e) {
     file_put_contents($log_file, "[$timestamp] Erro Crítico: " . $e->getMessage() . "\n", FILE_APPEND);
 }

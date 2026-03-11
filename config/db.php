@@ -6,11 +6,11 @@ define('DB_PASS', 'qPMwBp#WW*BN6k');     // Senha atual (manter até que o usuá
 
 // Lista de bancos de dados disponíveis devido a limitações de tamanho
 $DB_NAMES = [
-    'u582732852_buscacnpj6',
-    'u582732852_buscacnpj5',
-    'u582732852_buscacnpj4',
-    'u582732852_buscacnpj3',
-    'u582732852_buscacnpj2',
+    'u582732852_buscacnpj16', 'u582732852_buscacnpj15', 'u582732852_buscacnpj14',
+    'u582732852_buscacnpj13', 'u582732852_buscacnpj12', 'u582732852_buscacnpj11',
+    'u582732852_buscacnpj10', 'u582732852_buscacnpj9',  'u582732852_buscacnpj8',
+    'u582732852_buscacnpj7',  'u582732852_buscacnpj6',  'u582732852_buscacnpj5',
+    'u582732852_buscacnpj4',  'u582732852_buscacnpj3',  'u582732852_buscacnpj2',
     'u582732852_buscacnpj1'
 ];
 
