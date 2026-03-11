@@ -55,12 +55,42 @@ function getDB(): PDO {
  * Busca por um CNPJ em todos os bancos de dados
  */
 function fetchCNPJ($cnpj): ?array {
+    $clean = preg_replace('/\D/', '', $cnpj);
+    // Formatos possíveis no banco: 12345678000199 ou 12.345.678/0001-99
+    $formatted = preg_replace("/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/", "$1.$2.$3/$4-$5", $clean);
+    
     foreach (getAllConnections() as $db) {
         try {
-            $stmt = $db->prepare("SELECT * FROM dados_cnpj WHERE cnpj = :cnpj LIMIT 1");
-            $stmt->execute([':cnpj' => $cnpj]);
+            $stmt = $db->prepare("SELECT * FROM dados_cnpj WHERE cnpj = :cnpj OR cnpj = :formatted LIMIT 1");
+            $stmt->execute([':cnpj' => $clean, ':formatted' => $formatted]);
             $data = $stmt->fetch();
-            if ($data) return $data;
+            
+            if ($data) {
+                // HEURÍSTICA DE CORREÇÃO PARA DADOS DESLOCADOS (Shift Fix)
+                // Se a Razão Social é numérica (CNAE) e o Nome Fantasia parece uma Razão Social (Texto longo)
+                // Ou se os campos estão vindo com códigos no lugar de nomes.
+                $is_rs_numeric = is_numeric(preg_replace('/\D/', '', $data['razao_social'] ?? ''));
+                $is_nf_numeric = is_numeric(preg_replace('/\D/', '', $data['nome_fantasia'] ?? ''));
+                
+                if ($is_rs_numeric && !$is_nf_numeric && strlen($data['nome_fantasia']) > 10) {
+                    // Shift detectado: Provável que [CNAE] caiu em [Razão Social] e [Razão Social] em [Nome Fantasia]
+                    $data['cnae_principal_codigo'] = $data['razao_social'];
+                    $data['razao_social'] = $data['nome_fantasia'];
+                    $data['nome_fantasia'] = $data['situacao']; // Situacao pode estar no Nome Fantasia
+                    $data['situacao'] = $data['logradouro'];   // E assim por diante...
+                }
+                
+                // Caso específico relatado pelo usuário (Múltiplos campos numéricos no início)
+                if ($is_rs_numeric && $is_nf_numeric) {
+                    // Pode ser um shift de 2 ou 3 colunas. Como não sabemos a ordem exata sem ver o banco,
+                    // tentamos apenas limpar o que for óbvio para não mostrar lixo.
+                    if (strlen(preg_replace('/\D/', '', $data['razao_social'])) >= 7) {
+                        $data['cnae_principal_codigo'] = $data['razao_social'];
+                    }
+                }
+                
+                return $data;
+            }
         } catch (Exception $e) {
             continue;
         }

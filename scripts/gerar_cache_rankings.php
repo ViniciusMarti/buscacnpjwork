@@ -41,10 +41,14 @@ foreach ($states as $slug => $uf) {
         // 2. Top Cidades (Merge e Agregação)
         $city_map = [];
         foreach (getAllConnections() as $db_conn) {
-            $stmt = $db_conn->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
-            $stmt->execute([':uf' => $uf]);
-            foreach ($stmt->fetchAll() as $r) {
-                $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
+            try {
+                $stmt = $db_conn->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+                $stmt->execute([':uf' => $uf]);
+                foreach ($stmt->fetchAll() as $r) {
+                    $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
+                }
+            } catch (Exception $e) {
+                continue;
             }
         }
         arsort($city_map);
@@ -59,10 +63,14 @@ foreach ($states as $slug => $uf) {
         // 3. Setor Dominante (Agregado)
         $cnae_map = [];
         foreach (getAllConnections() as $db_conn) {
-            $stmt = $db_conn->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
-            $stmt->execute([':uf' => $uf]);
-            $r = $stmt->fetch();
-            if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
+            try {
+                $stmt = $db_conn->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+                $stmt->execute([':uf' => $uf]);
+                $r = $stmt->fetch();
+                if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
+            } catch (Exception $e) {
+                continue;
+            }
         }
         arsort($cnae_map);
         $top_cnae_name = !empty($cnae_map) ? key($cnae_map) : 'Nenhum';

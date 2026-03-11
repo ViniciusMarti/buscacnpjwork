@@ -28,15 +28,18 @@ try {
     }
 
 
-    // Otimização: Valores nacionais fixos
-    $br_stats = [
-        't' => 55843210, 
-        's' => 45890234120.00
-    ];
+    // Otimização: Pegar valores reais via agregação distribuída
+    $cache_stats_file = $cache_dir . '/br_totals.json';
+    if (file_exists($cache_stats_file) && (time() - filemtime($cache_stats_file) < $cache_time)) {
+        $br_stats = json_decode(file_get_contents($cache_stats_file), true);
+    } else {
+        $br_stats = aggregateDistributed("SELECT COUNT(*) as t, SUM(capital_social) as s FROM dados_cnpj WHERE situacao = 'ATIVA'", []);
+        file_put_contents($cache_stats_file, json_encode($br_stats));
+    }
 
 } catch (PDOException $e) {
     // Fallback silencioso para erros
-    $br_stats = ['t' => '55M+', 's' => 0];
+    $br_stats = ['t' => 0, 's' => 0];
     $top_br = [];
 }
 
@@ -171,7 +174,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     
     <div class="grid-states">
         <?php foreach($state_list as $slug => $name): ?>
-        <a href="/<?php echo $slug; ?>/" class="state-card">
+        <a href="/rankings/<?php echo $slug; ?>/" class="state-card">
             <span><?php echo $name; ?></span>
             <span class="arrow">→</span>
         </a>

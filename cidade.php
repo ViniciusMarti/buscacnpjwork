@@ -51,18 +51,23 @@ try {
     // Fallback: Busca via banco de dados (lento, apenas se o cache falhar)
     if (!$real_city_name) {
         foreach (getAllConnections() as $db_conn) {
-            $stmt_c = $db_conn->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
-            $stmt_c->execute([':uf' => $uf]);
-            
-            while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
-                $name = $row['municipio'];
-                // Normalização p/ conferir slug (mesma lógica do pre_aquecer)
-                $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
-                $s = preg_replace('/[^a-z0-9-]/', '', $s);
-                if ($s === $cidade_slug) {
-                    $real_city_name = $name;
-                    break 2; // Sai do while e do foreach
+            try {
+                $stmt_c = $db_conn->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE uf = :uf");
+                $stmt_c->execute([':uf' => $uf]);
+                
+                while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
+                    $name = $row['municipio'];
+                    // Normalização p/ conferir slug (mesma lógica do pre_aquecer)
+                    $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
+                    $s = preg_replace('/[^a-z0-9-]/', '', $s);
+                    if ($s === $cidade_slug) {
+                        $real_city_name = $name;
+                        break 2; // Sai do while e do foreach
+                    }
                 }
+            } catch (Exception $e) {
+                error_log("Erro no banco durante busca de cidade: " . $e->getMessage());
+                continue;
             }
         }
     }
@@ -85,10 +90,14 @@ try {
     // 2. Panorama da Cidade (Top CNAE Distribuído)
     $cnae_map = [];
     foreach (getAllConnections() as $db) {
-        $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
-        $stmt_cnae->execute([':uf' => $uf, ':city' => $real_city_name]);
-        $r = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
-        if ($r) $cnae_map[$r['cnae_principal_descricao']] = ($cnae_map[$r['cnae_principal_descricao']] ?? 0) + $r['c'];
+        try {
+            $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+            $stmt_cnae->execute([':uf' => $uf, ':city' => $real_city_name]);
+            $r = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
+            if ($r) $cnae_map[$r['cnae_principal_descricao']] = ($cnae_map[$r['cnae_principal_descricao']] ?? 0) + $r['c'];
+        } catch (Exception $e) {
+            continue;
+        }
     }
     arsort($cnae_map);
     $top_cnae = !empty($cnae_map) ? ['cnae_principal_descricao' => key($cnae_map), 'c' => current($cnae_map)] : null;
@@ -183,7 +192,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="page-wrap fade-up">
     <div class="bc">
         <a href="/">Início</a> > 
-        <a href="/<?php echo $estado_slug; ?>/"><?php echo $state_name; ?></a> > 
+        <a href="/rankings/">Rankings</a> > 
+        <a href="/rankings/<?php echo $estado_slug; ?>/"><?php echo $state_name; ?></a> > 
         <?php echo titleCase($real_city_name); ?>
     </div>
     
@@ -249,7 +259,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <div style="margin-top: 60px; text-align: center;">
-        <a href="/<?php echo $estado_slug; ?>/" class="btn-copy" style="padding: 15px 30px;">
+        <a href="/rankings/<?php echo $estado_slug; ?>/" class="btn-copy" style="padding: 15px 30px;">
             ← Voltar para Ranking de <?php echo $state_name; ?>
         </a>
     </div>

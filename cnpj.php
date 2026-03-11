@@ -255,10 +255,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <nav aria-label="Breadcrumb" class="bc">
         <a href="/">Início</a> 
         <?php if ($state_slug_bc): ?>
-            / <a href="/<?php echo $state_slug_bc; ?>/"><?php echo $state_name_bc; ?></a>
+            / <a href="/rankings/<?php echo $state_slug_bc; ?>/"><?php echo $state_name_bc; ?></a>
         <?php endif; ?>
         <?php if ($city_slug_bc && $state_slug_bc): ?>
-            / <a href="/<?php echo $state_slug_bc; ?>/<?php echo $city_slug_bc; ?>/"><?php echo $city_name_bc; ?></a>
+            / <a href="/rankings/<?php echo $state_slug_bc; ?>/<?php echo $city_slug_bc; ?>/"><?php echo $city_name_bc; ?></a>
         <?php endif; ?>
         / <?php echo $cnpj_f; ?>
     </nav>

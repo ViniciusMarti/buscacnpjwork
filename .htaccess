@@ -36,22 +36,23 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([0-9]{14})/?$ cnpj.php?cnpj=$1 [L,QSA]
 
-# --- Roteamento Dinâmico para Rankings (Novo Modelo) ---
-# Redireciona antigo /rankings/estado/... para root
-RewriteRule ^rankings/estado/([a-z0-9-]+)/?$ /$1/ [R=301,L]
-RewriteRule ^rankings/estado/([a-z0-9-]+)/([a-z0-9-]+)/?$ /$1/$2/ [R=301,L]
+# --- Roteamento Dinâmico para Rankings (Novo Modelo Hierárquico) ---
+# Redireciona antigo /estado/ para /rankings/estado/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(acre|alagoas|amapa|amazonas|bahia|ceara|distrito-federal|espirito-santo|goias|maranhao|mato-grosso|mato-grosso-do-sul|minas-gerais|para|paraiba|parana|pernambuco|piaui|rio-de-janeiro|rio-grande-do-norte|rio-grande-do-sul|rondonia|roraima|santa-catarina|sao-paulo|sergipe|tocantins)/?$ /rankings/$1/ [R=301,L]
+
+# Redireciona antigo /estado/cidade/ para /rankings/estado/cidade/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(acre|alagoas|amapa|amazonas|bahia|ceara|distrito-federal|espirito-santo|goias|maranhao|mato-grosso|mato-grosso-do-sul|minas-gerais|para|paraiba|parana|pernambuco|piaui|rio-de-janeiro|rio-grande-do-norte|rio-grande-do-sul|rondonia|roraima|santa-catarina|sao-paulo|sergipe|tocantins)/([a-z0-9-]+)/?$ /rankings/$1/$2/ [R=301,L]
 
 # Servir Rankings na raiz
 RewriteRule ^rankings/?$ rankings-index.php [L,QSA]
 
-# Estado e Cidade (apenas se não for arquivo físico como /sobre/ ou /contato/)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([a-z-]+)/?$ ranking.php?slug=$1 [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([a-z-]+)/([a-z0-9-]+)/?$ cidade.php?estado_slug=$1&cidade_slug=$2 [L,QSA]
+# Estado e Cidade sob /rankings/
+RewriteRule ^rankings/([a-z-]+)/?$ ranking.php?slug=$1 [L,QSA]
+RewriteRule ^rankings/([a-z-]+)/([a-z0-9-]+)/?$ cidade.php?estado_slug=$1&cidade_slug=$2 [L,QSA]
 
 # --- URLs Limpas ---
 # Redireciona de /index.html para /

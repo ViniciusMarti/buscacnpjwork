@@ -76,10 +76,15 @@ try {
         // OTIMIZAÇÃO: Busca o top 10 cidades (Agregado de todos os bancos)
         $city_map = [];
         foreach (getAllConnections() as $db) {
-            $stmt = $db->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
-            $stmt->execute([':uf' => $uf]);
-            foreach ($stmt->fetchAll() as $r) {
-                $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
+            try {
+                $stmt = $db->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+                $stmt->execute([':uf' => $uf]);
+                foreach ($stmt->fetchAll() as $r) {
+                    $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
+                }
+            } catch (Exception $e) {
+                error_log("Erro no ranking de cidades: " . $e->getMessage());
+                continue;
             }
         }
         arsort($city_map);
@@ -94,10 +99,14 @@ try {
         // OTIMIZAÇÃO: Busca o setor dominante (Agregado)
         $cnae_map = [];
         foreach (getAllConnections() as $db) {
-            $stmt = $db->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
-            $stmt->execute([':uf' => $uf]);
-            $r = $stmt->fetch();
-            if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
+            try {
+                $stmt = $db->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao = 'ATIVA' AND uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+                $stmt->execute([':uf' => $uf]);
+                $r = $stmt->fetch();
+                if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
+            } catch (Exception $e) {
+                continue;
+            }
         }
         arsort($cnae_map);
         $top_cnae_name = !empty($cnae_map) ? key($cnae_map) : 'Nenhum';
@@ -255,7 +264,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </header>
 
 <div class="page-wrap fade-up">
-    <div class="bc"><a href="/">Início</a> > <?php echo $state_name; ?></div>
+    <div class="bc"><a href="/">Início</a> > <a href="/rankings/">Rankings</a> > <?php echo $state_name; ?></div>
     
     <header class="page-header">
         <h1 style="font-size: clamp(2rem, 8vw, 3rem); margin-bottom:10px; line-height: 1.1;">Maiores Empresas em <?php echo $state_name; ?></h1>
@@ -364,7 +373,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             $city_slug = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $city['municipio'])));
             $city_slug = preg_replace('/[^a-z0-9-]/', '', $city_slug);
         ?>
-        <a href="/<?php echo $slug; ?>/<?php echo $city_slug; ?>/" class="state-card">
+        <a href="/rankings/<?php echo $slug; ?>/<?php echo $city_slug; ?>/" class="state-card">
             <div>
                 <span><?php echo titleCase($city['municipio']); ?></span>
                 <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 500;"><?php echo number_format($city['total'], 0, ',', '.'); ?> empresas</div>
