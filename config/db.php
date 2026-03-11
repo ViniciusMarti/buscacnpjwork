@@ -82,10 +82,31 @@ function fetchCNPJ($cnpj): ?array {
                 
                 // Caso específico relatado pelo usuário (Múltiplos campos numéricos no início)
                 if ($is_rs_numeric && $is_nf_numeric) {
-                    // Pode ser um shift de 2 ou 3 colunas. Como não sabemos a ordem exata sem ver o banco,
-                    // tentamos apenas limpar o que for óbvio para não mostrar lixo.
                     if (strlen(preg_replace('/\D/', '', $data['razao_social'])) >= 7) {
                         $data['cnae_principal_codigo'] = $data['razao_social'];
+                    }
+                }
+
+                // HEURÍSTICA: Detecção de linha CSV fundida na Razão Social
+                // Se encontrar vírgulas e termos como 'SAC' ou nomes de cidades/UFs
+                if (strpos($data['razao_social'] ?? '', ',') !== false && count(explode(',', $data['razao_social'])) > 3) {
+                    $parts = explode(',', $data['razao_social']);
+                    // Exemplo: BOX 05,CENTRO,01023001,SAO PAULO,SP,,1166835094,47...
+                    // Tenta mapear campos de endereço baseados em posições comuns de erro
+                    if (count($parts) >= 5) {
+                        $data['logradouro'] = $data['logradouro'] ?: trim($parts[0]);
+                        $data['bairro'] = $data['bairro'] ?: trim($parts[1]);
+                        $data['cep'] = $data['cep'] ?: trim($parts[2]);
+                        $data['municipio'] = $data['municipio'] ?: trim($parts[3]);
+                        $data['uf'] = $data['uf'] ?: trim($parts[4]);
+                        
+                        // Tenta encontrar a Razão Social real em outro campo se estiver disponível
+                        if (!empty($data['nome_fantasia']) && !is_numeric($data['nome_fantasia'])) {
+                            $data['razao_social'] = $data['nome_fantasia'];
+                        } else {
+                            // Se não tiver onde pegar o nome, pelo menos remove o endereço do campo de nome
+                            $data['razao_social'] = 'EMPRESA REGISTRADA (' . $data['cnpj'] . ')';
+                        }
                     }
                 }
                 
