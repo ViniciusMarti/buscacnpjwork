@@ -133,6 +133,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <?php $current_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>
     <link rel="canonical" href="<?php echo $current_url; ?>">
     <link rel="stylesheet" href="/assets/cnpj.css?v=<?php echo filemtime(__DIR__ . '/assets/cnpj.css'); ?>">
+    <link href="/fontawesome/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         .ranking-page { background: var(--bg); }
@@ -214,7 +215,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
     </div>
 
-    <h2 class="sec-title">📍 Resumo do Mercado Local</h2>
+    <h2 class="sec-title"><i class="fa-solid fa-magnifying-glass-chart mr-2"></i> Resumo do Mercado Local</h2>
     <div class="panorama-grid">
         <div class="p-item">
             <label>Setor Principal</label>
@@ -260,7 +261,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <div style="margin-top: 60px; text-align: center;">
         <a href="/rankings/<?php echo $estado_slug; ?>/" class="btn-copy" style="padding: 15px 30px;">
-            ← Voltar para Ranking de <?php echo $state_name; ?>
+            <i class="fa-solid fa-arrow-left mr-1"></i> Voltar para Ranking de <?php echo $state_name; ?>
         </a>
     </div>
 

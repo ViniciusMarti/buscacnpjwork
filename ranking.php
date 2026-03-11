@@ -192,6 +192,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <?php $current_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>
     <link rel="canonical" href="<?php echo $current_url; ?>">
     <link rel="stylesheet" href="/assets/cnpj.css?v=<?php echo filemtime(__DIR__ . '/assets/cnpj.css'); ?>">
+    <link href="/fontawesome/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         .ranking-page { background: var(--bg); }
@@ -283,7 +284,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
     </div>
 
-    <h2 class="sec-title">📍 Panorama Empresarial</h2>
+    <h2 class="sec-title"><i class="fa-solid fa-chart-line mr-2"></i> Panorama Empresarial</h2>
     <div class="panorama-grid">
         <div class="p-item">
             <label>Participação no Brasil</label>
@@ -366,7 +367,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </table>
     </div>
 
-    <h2 class="sec-title" style="margin-top: 60px;">🏙️ Maiores Cidades em <?php echo $state_name; ?></h2>
+    <h2 class="sec-title" style="margin-top: 60px;"><i class="fa-solid fa-city mr-2"></i> Maiores Cidades em <?php echo $state_name; ?></h2>
     <p style="margin-top: -10px; margin-bottom: 20px; color: var(--text-muted);">Ranking das 10 cidades com maior concentração de empresas no estado.</p>
     <div class="grid-states" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
         <?php foreach($top_cities_list as $city): 
@@ -378,7 +379,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <span><?php echo titleCase($city['municipio']); ?></span>
                 <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 500;"><?php echo number_format($city['total'], 0, ',', '.'); ?> empresas</div>
             </div>
-            <span class="arrow">→</span>
+            <span class="arrow"><i class="fa-solid fa-arrow-right"></i></span>
         </a>
         <?php endforeach; ?>
     </div>
