@@ -129,6 +129,14 @@ function queryCNPJ(PDO $db, $clean, $formatted): ?array {
                 $data['cnae_fiscal_principal'] = $data['razao_social'];
             }
 
+            // --- NORMALIZAÇÃO DE COLUNAS (Fallback para diferentes schemas) ---
+            $data['data_inicio_atividade'] = $data['data_inicio_atividade'] ?? $data['data_abertura'] ?? '';
+            $data['cnae_principal_descricao'] = $data['cnae_principal_descricao'] ?? $data['cnae_fiscal_principal_descricao'] ?? '';
+            $data['cnae_fiscal_secundaria'] = $data['cnae_fiscal_secundaria'] ?? $data['cnae_fiscal_secundária'] ?? '';
+            $data['situacao_cadastral'] = $data['situacao_cadastral'] ?? $data['situacao'] ?? 'N/A';
+            $data['sigla_uf'] = $data['sigla_uf'] ?? $data['uf'] ?? '';
+            $data['telefone_1'] = $data['telefone_1'] ?? $data['telefone'] ?? '';
+
             // Detecção de linha CSV fundida (Endereço na Razão Social)
             if (strpos($data['razao_social'] ?? '', ',') !== false && count(explode(',', $data['razao_social'])) > 3) {
                 $parts = explode(',', $data['razao_social']);

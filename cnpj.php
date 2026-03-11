@@ -190,10 +190,11 @@ try {
 
 
 // CNAE Details Lookup - Atualiza a descrição com base no novo banco
-if (isset($data['cnae_fiscal_principal']) && !empty($data['cnae_fiscal_principal'])) {
+$cnae_db = getCNAEDB();
+if ($cnae_db !== null) {
     try {
-        $cnae_db = getCNAEDB();
-        if ($cnae_db !== null) {
+        // 1. Atividade Principal
+        if (!empty($data['cnae_fiscal_principal'])) {
             $cnae_clean = preg_replace('/[^0-9]/', '', $data['cnae_fiscal_principal']);
             $stmt_cnae = $cnae_db->prepare("SELECT Descrição FROM lista_cnae WHERE CNAE = :cnae LIMIT 1");
             $stmt_cnae->execute([':cnae' => $cnae_clean]);
@@ -202,9 +203,31 @@ if (isset($data['cnae_fiscal_principal']) && !empty($data['cnae_fiscal_principal
                 $data['cnae_principal_descricao'] = $cnae_info['Descrição'];
             }
         }
-    } catch (Exception $e) {
-        // Silencioso
-    }
+
+        // 2. Atividades Secundárias
+        $sec_str = trim($data['cnae_fiscal_secundaria']);
+        if ($sec_str) {
+            $separador_sec = strpos($sec_str, ';') !== false ? ';' : '|';
+            $sec_codes = explode($separador_sec, $sec_str);
+            $sec_com_descricao = [];
+            
+            foreach ($sec_codes as $code) {
+                $code = trim($code);
+                if (!$code) continue;
+                $code_clean = preg_replace('/[^0-9]/', '', $code);
+                $stmt_sec = $cnae_db->prepare("SELECT Descrição FROM lista_cnae WHERE CNAE = :cnae LIMIT 1");
+                $stmt_sec->execute([':cnae' => $code_clean]);
+                $res_sec = $stmt_sec->fetch(PDO::FETCH_ASSOC);
+                
+                if ($res_sec && !empty($res_sec['Descrição'])) {
+                    $sec_com_descricao[] = $res_sec['Descrição'] . ' (' . $code . ')';
+                } else {
+                    $sec_com_descricao[] = $code;
+                }
+            }
+            $data['secundarias_processadas'] = $sec_com_descricao;
+        }
+    } catch (Exception $e) { /* Silencioso */ }
 }
 
 $faq_schema = [
@@ -286,7 +309,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="info-box"><div class="data-label">Nome Fantasia</div><p><?php echo $data['nome_fantasia'] ?: '—'; ?></p></div>
         <div class="info-box"><div class="data-label">Data de Abertura</div><p>
             <?php 
-                $data_abertura = $data['data_abertura'];
+                $data_abertura = $data['data_inicio_atividade'];
                 if ($data_abertura) {
                     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data_abertura)) {
                         echo date('d/m/Y', strtotime($data_abertura));
@@ -345,11 +368,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="info-grid" style="margin-bottom:24px;">
         <div class="info-box">
             <div class="data-label">Optante pelo Simples</div>
-            <p><?php echo ($data['opcao_simples'] == '1') ? 'SIM (Desde ' . date('d/m/Y', strtotime($data['data_opcao_simples'])) . ')' : 'NÃO'; ?></p>
+            <p><?php 
+                if ($data['opcao_simples'] == '1') {
+                    $dt = $data['data_opcao_simples'];
+                    echo 'SIM' . ($dt ? ' (Desde ' . date('d/m/Y', strtotime($dt)) . ')' : '');
+                } else {
+                    echo 'NÃO';
+                }
+            ?></p>
         </div>
         <div class="info-box">
             <div class="data-label">Optante pelo MEI</div>
-            <p><?php echo ($data['opcao_mei'] == '1') ? 'SIM (Desde ' . date('d/m/Y', strtotime($data['data_opcao_mei'])) . ')' : 'NÃO'; ?></p>
+            <p><?php 
+                if ($data['opcao_mei'] == '1') {
+                    $dt_mei = $data['data_opcao_mei'];
+                    echo 'SIM' . ($dt_mei ? ' (Desde ' . date('d/m/Y', strtotime($dt_mei)) . ')' : '');
+                } else {
+                    echo 'NÃO';
+                }
+            ?></p>
         </div>
     </div>
 
@@ -362,16 +399,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="data-label">Atividades Secundárias</div>
         <ul style="list-style:none; padding-top:10px;">
             <?php 
-            $sec_str = trim($data['cnae_fiscal_secundaria']);
-            if(!$sec_str) {
-                echo "<li>—</li>";
-            } else {
-                $separador_sec = strpos($sec_str, ';') !== false ? ';' : '|';
-                $sec = explode($separador_sec, $sec_str);
-                foreach($sec as $s) {
-                    $s = trim($s);
-                    if ($s) echo "<li>$s</li>";
+            if (isset($data['secundarias_processadas']) && !empty($data['secundarias_processadas'])) {
+                foreach ($data['secundarias_processadas'] as $s) {
+                    echo "<li>$s</li>";
                 }
+            } else {
+                echo "<li>—</li>";
             }
             ?>
         </ul>
@@ -411,7 +444,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <ul style="list-style:none;">
                 <li>
                     <strong><?php echo $nome; ?> (MATRIZ)</strong> - <?php echo format_cnpj($dados_matriz['cnpj']); ?> 
-                    <a href="/<?php echo $dados_matriz['cnpj']; ?>/" style="color:var(--primary); font-weight:600;">(<?php echo $dados_matriz['uf'] . ', ' . $dados_matriz['municipio']; ?>)</a>
+                    <a href="/<?php echo $dados_matriz['cnpj']; ?>/" style="color:var(--primary); font-weight:600;">(<?php echo $dados_matriz['sigla_uf'] . ', ' . $dados_matriz['municipio']; ?>)</a>
                 </li>
             </ul>
         <?php elseif ($is_matriz && count($outras_unidades) > 0): ?>
