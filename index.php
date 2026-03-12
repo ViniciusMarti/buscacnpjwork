@@ -133,6 +133,22 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             .logos-grid img { height: 24px; }
             .logos-grid a { padding: 8px 12px; }
         }
+
+        /* Dark Mode Adjustments */
+        @media (prefers-color-scheme: dark) {
+            .logos-grid a {
+                filter: grayscale(100%) brightness(2.5) opacity(0.5);
+                background: rgba(255, 255, 255, 0.03);
+            }
+            .logos-grid a:hover {
+                filter: grayscale(0%) brightness(1) opacity(1);
+                background: rgba(255, 255, 255, 0.08);
+                border-color: rgba(255, 255, 255, 0.15);
+            }
+            .quick-search h2 {
+                opacity: 0.4;
+            }
+        }
     </style>
 </head>
 <body class="home-page-body">
