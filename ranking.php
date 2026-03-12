@@ -260,7 +260,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <header>
     <div class="header-inner">
         <a class="logo" href="/">Busca<span>CNPJ</span> Grátis</a>
-        <nav><a href="/">Início</a><a href="/rankings/">Rankings</a><a href="/sobre/">Sobre</a></nav>
+        <nav><a href="/"><i class="fa-solid fa-house mr-1"></i> Início</a><a href="/rankings/"><i class="fa-solid fa-chart-simple mr-1"></i> Rankings</a><a href="/analises/"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Análises</a><a href="/sobre/"><i class="fa-solid fa-circle-info mr-1"></i> Sobre</a></nav>
     </div>
 </header>
 

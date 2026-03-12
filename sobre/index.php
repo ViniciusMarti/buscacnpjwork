@@ -36,6 +36,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     
     <!-- CSS & Fonts -->
     <link rel="stylesheet" href="/assets/cnpj.css?v=<?php echo filemtime($_SERVER['DOCUMENT_ROOT'] . '/assets/cnpj.css'); ?>">
+    <link href="/fontawesome/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
@@ -86,9 +87,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="header-inner">
         <a class="logo" href="/">Busca<span>CNPJ</span> Grátis</a>
         <nav>
-            <a href="/">Início</a>
-            <a href="/rankings/">Rankings</a>
-            <a href="/sobre/" class="active">Sobre</a>
+            <a href="/"><i class="fa-solid fa-house mr-1"></i> Início</a>
+            <a href="/rankings/"><i class="fa-solid fa-chart-simple mr-1"></i> Rankings</a>
+            <a href="/analises/"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Análises</a>
+            <a href="/sobre/" class="active"><i class="fa-solid fa-circle-info mr-1"></i> Sobre</a>
         </nav>
     </div>
 </header>
