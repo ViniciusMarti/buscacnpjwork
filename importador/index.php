@@ -6,46 +6,36 @@ $stateFile = 'state.json';
 
 // Handle Start Request
 if (isset($_GET['action']) && $_GET['action'] == 'start') {
+    header('Content-Type: application/json');
+    
+    // Fix permissions if needed
+    @chmod(__DIR__ . '/state.json', 0666);
+    @chmod(__DIR__ . '/logs/import_progress.json', 0666);
+    
+    echo json_encode(['status' => 'ready', 'msg' => 'Pronto para iniciar processamento via navegador']);
+    exit;
+}
+
+// Handle Single Step (AJAX Loop)
+if (isset($_GET['action']) && $_GET['action'] == 'step') {
     ob_start();
     header('Content-Type: application/json');
     try {
-        $logPath = __DIR__ . "/logs/import_errors.log";
-        $scriptPath = __DIR__ . "/cron_import.php";
+        require_once 'import_worker.php';
+        $keyFile = 'buscacnpj-490113-7e0757134be9.json';
         
-        if (!file_exists($scriptPath)) {
-            throw new Exception("Script cron_import.php não encontrado.");
-        }
-
-        // Hostinger common PHP paths
-        $phpPaths = ['/usr/bin/php', '/usr/local/bin/php', 'php'];
-        $success = false;
-        $lastError = "";
-
-        foreach ($phpPaths as $php) {
-            $cmd = "$php $scriptPath > /dev/null 2>&1 &";
-            $output = [];
-            $resultCode = 0;
-            @exec($cmd, $output, $resultCode);
-            
-            if ($resultCode === 0) {
-                $success = true;
-                file_put_contents($logPath, date('[Y-m-d H:i:s] ') . "Processo iniciado com suceso usando: $php" . PHP_EOL, FILE_APPEND);
-                break;
-            } else {
-                $lastError = "Falha com $php (code $resultCode)";
-            }
-        }
-
-        if (!$success) {
-             throw new Exception("Não foi possível iniciar o processo em segundo plano. $lastError");
-        }
-
+        // We need a modified run method that only does ONE chunk/page
+        // For simplicity, let's just use the existing worker but with a limit
+        $worker = new ImportWorker($keyFile);
+        
+        // Let's perform one iteration of the processing
+        // I will add a method 'step()' to ImportWorker
+        $result = $worker->step(); 
+        
         ob_clean();
-        echo json_encode(['status' => 'started', 'msg' => 'Processo disparado']);
+        echo json_encode($result);
     } catch (Exception $e) {
         ob_clean();
-        http_response_code(500);
-        file_put_contents(__DIR__ . "/logs/import_errors.log", date('[Y-m-d H:i:s] ') . "Start Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
         echo json_encode(['status' => 'error', 'msg' => $e->getMessage()]);
     }
     exit;
@@ -356,32 +346,60 @@ if (isset($_GET['action']) && $_GET['action'] == 'poll') {
         }
     }
 
+    let isProcessing = false;
+
+    async function runNextStep() {
+        if (!isProcessing) return;
+
+        try {
+            const res = await fetch('?action=step');
+            const data = await res.json();
+            
+            if (data.status === 'error') {
+                addLog('Erro no Processamento: ' + data.msg, 'log-error');
+                isProcessing = false;
+                btnStart.disabled = false;
+                btnStart.innerHTML = 'Retomar Importação';
+                return;
+            }
+
+            if (data.msg) addLog(data.msg);
+
+            if (data.status === 'completed') {
+                addLog('Importação concluída com sucesso!');
+                isProcessing = false;
+                btnStart.disabled = false;
+                btnStart.innerHTML = 'Reiniciar Importação';
+                return;
+            }
+
+            // Continuar loop
+            setTimeout(runNextStep, 500); // Pequena pausa para respiro do servidor
+
+        } catch (e) {
+            addLog('Erro de Conexão: ' + e.message, 'log-error');
+            isProcessing = false;
+            btnStart.disabled = false;
+        }
+    }
+
     btnStart.onclick = async () => {
-        if (!confirm('Deseja iniciar o processo de importação automática?')) return;
+        if (isProcessing) return;
+        if (!confirm('Deseja iniciar o processo de importação via navegador? Mantenha esta aba aberta.')) return;
         
-        addLog('Iniciando pipeline...');
+        addLog('Iniciando pipeline via navegador...');
         btnStart.disabled = true;
+        isProcessing = true;
         
         try {
             const res = await fetch('?action=start');
-            const text = await res.text();
-            
-            try {
-                const data = JSON.parse(text);
-                if (data.status === 'started') {
-                    addLog('Processo disparado em segundo plano.');
-                } else {
-                    addLog('Erro: ' + (data.msg || 'Desconhecido'), 'log-error');
-                    btnStart.disabled = false;
-                }
-            } catch (jsonErr) {
-                addLog('Erro de Resposta: Resposta do servidor não é JSON.', 'log-error');
-                console.error('Invalid JSON:', text);
-                addLog('Dica: O servidor pode estar exibindo um erro PHP. Verifique logs/import_errors.log', 'log-error');
-                btnStart.disabled = false;
+            const data = await res.json();
+            if (data.status === 'ready') {
+                addLog('Sincronização iniciada...');
+                runNextStep();
             }
         } catch (e) {
-            addLog('Erro de Rede: ' + e.message, 'log-error');
+            addLog('Erro de Inicialização: ' + e.message, 'log-error');
             btnStart.disabled = false;
         }
     };

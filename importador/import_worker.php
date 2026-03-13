@@ -161,4 +161,91 @@ class ImportWorker {
             }
         } while ($pageToken);
     }
+    public function step() {
+        $tables = ['empresas', 'estabelecimentos', 'socios'];
+        $currentTable = $this->state['current_table'];
+        $tableIndex = array_search($currentTable, $tables);
+        
+        if ($tableIndex === false) {
+            return ['status' => 'completed', 'msg' => 'Todas as tabelas processadas'];
+        }
+
+        $lastDate = $this->state['ultima_data_processada'];
+        $sql = "SELECT * FROM `basedosdados.br_me_cnpj.$currentTable` ";
+        if ($lastDate != '1900-01-01') {
+            $sql .= " WHERE sigla_uf IS NOT NULL "; 
+        }
+
+        $pageToken = $this->state['last_page_token'];
+        $jobId = $this->state['last_job_id'];
+
+        try {
+            if ($jobId && $pageToken) {
+                $response = $this->bq->getQueryResults($jobId, $pageToken);
+            } else {
+                $response = $this->bq->query($sql);
+                $jobId = $response['jobReference']['jobId'] ?? null;
+                $this->state['last_job_id'] = $jobId;
+            }
+
+            $rows = $this->bq->parseRows($response);
+            $importedCount = 0;
+
+            if (!empty($rows)) {
+                $batchByShard = [];
+                foreach ($rows as $row) {
+                    $cnpj_basico = $row['cnpj_basico'] ?? null;
+                    if (!$cnpj_basico) continue;
+                    $shardId = $this->sharder->getShardId($cnpj_basico);
+                    $batchByShard[$shardId][] = $row;
+                }
+
+                foreach ($batchByShard as $shardId => $shardRows) {
+                    $this->sharder->batchInsert($currentTable, $shardRows, $shardId);
+                    $importedCount += count($shardRows);
+                }
+            }
+
+            $nextPageToken = $response['pageToken'] ?? null;
+            $this->state['last_page_token'] = $nextPageToken;
+
+            if (!$nextPageToken) {
+                // Tabela finalizada, passar para a próxima
+                $nextTableIndex = $tableIndex + 1;
+                if ($nextTableIndex < count($tables)) {
+                    $this->state['current_table'] = $tables[$nextTableIndex];
+                    $this->state['last_page_token'] = null;
+                    $this->state['last_job_id'] = null;
+                    $msg = "Tabela $currentTable finalizada. Próxima: " . $this->state['current_table'];
+                } else {
+                    $this->state['ultima_data_processada'] = date('Y-m-d');
+                    $this->state['status'] = 'completed';
+                    $msg = "Importação total concluída!";
+                }
+            } else {
+                $msg = "Página processada para $currentTable. Importados: $importedCount";
+            }
+
+            $this->saveState();
+            
+            // Log simplificado para progresso
+            $this->state['records_imported'] = ($this->state['records_imported'] ?? 0) + $importedCount;
+            $progressData = [
+                'table' => $currentTable,
+                'records_imported' => $this->state['records_imported'],
+                'status' => $this->state['status'] ?? 'running'
+            ];
+            file_put_contents($this->progressFile, json_encode($progressData));
+
+            return [
+                'status' => $this->state['status'] ?? 'running',
+                'progress' => $progressData,
+                'msg' => $msg
+            ];
+
+        } catch (Exception $e) {
+            $this->logError("Step Error ($currentTable): " . $e->getMessage());
+            return ['status' => 'error', 'msg' => $e->getMessage()];
+        }
+    }
 }
