@@ -7,8 +7,12 @@
 header('Content-Type: application/json');
 
 // Configurações
-$BASE_SHARDS_PATH = realpath(__DIR__ . '/../shards');
+$BASE_SHARDS_PATH = dirname(__DIR__) . '/shards'; // Caminho absoluto manual
 
+// Se a pasta base 'shards' não existe, tenta criar
+if (!is_dir($BASE_SHARDS_PATH)) {
+    @mkdir($BASE_SHARDS_PATH, 0777, true);
+}
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die(json_encode(['success' => false, 'message' => 'Método não permitido']));
 }
