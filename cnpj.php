@@ -398,6 +398,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </iframe>
     </div>
 
+    <!-- Botões de Navegação -->
+    <div class="nav-buttons fade-up" style="display: flex; gap: 16px; margin-top: 16px; margin-bottom: 32px; flex-wrap: wrap;">
+        <a href="https://www.google.com/maps/search/?api=1&query=<?php echo urlencode($data['logradouro'] . ', ' . $data['numero'] . ' - ' . $data['bairro'] . ', ' . $data['municipio'] . ' - ' . $data['sigla_uf']); ?>" 
+           target="_blank" 
+           class="btn-nav" 
+           style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 24px; background: white; border: 1px solid #e2e8f0; border-radius: 16px; text-decoration: none; color: #1e293b; font-weight: 700; transition: all 0.2s; box-shadow: var(--shadow-sm); min-width: 200px;">
+            <img src="/assets/Google_Maps_icon_(2020).svg.png" alt="Google Maps" style="height: 24px; width: auto;">
+            Abrir no Google Maps
+        </a>
+        <a href="https://waze.com/ul?q=<?php echo urlencode($data['logradouro'] . ', ' . $data['numero'] . ' - ' . $data['bairro'] . ', ' . $data['municipio'] . ' - ' . $data['sigla_uf']); ?>" 
+           target="_blank" 
+           class="btn-nav" 
+           style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 24px; background: white; border: 1px solid #e2e8f0; border-radius: 16px; text-decoration: none; color: #1e293b; font-weight: 700; transition: all 0.2s; box-shadow: var(--shadow-sm); min-width: 200px;">
+            <img src="/assets/pngimg.com - waze_PNG40.png" alt="Waze" style="height: 24px; width: auto;">
+            Abrir no Waze
+        </a>
+    </div>
+
     <h2 class="sec-title">Opções Tributárias</h2>
     <div class="info-grid" style="margin-bottom:24px;">
         <div class="info-box">
