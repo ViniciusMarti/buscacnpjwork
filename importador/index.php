@@ -9,23 +9,35 @@ if (isset($_GET['action']) && $_GET['action'] == 'start') {
     ob_start();
     header('Content-Type: application/json');
     try {
-        $phpBinary = 'php';
-        $scriptPath = __DIR__ . "/cron_import.php";
         $logPath = __DIR__ . "/logs/import_errors.log";
+        $scriptPath = __DIR__ . "/cron_import.php";
         
         if (!file_exists($scriptPath)) {
             throw new Exception("Script cron_import.php não encontrado.");
         }
 
-        // Tentar capturar qualquer erro do comando exec
-        $cmd = "$phpBinary $scriptPath > /dev/null 2>&1 &";
-        $output = [];
-        $resultCode = 0;
-        @exec($cmd, $output, $resultCode);
+        // Hostinger common PHP paths
+        $phpPaths = ['/usr/bin/php', '/usr/local/bin/php', 'php'];
+        $success = false;
+        $lastError = "";
 
-        // Se o exec falhou e retornou algo
-        if ($resultCode !== 0) {
-            file_put_contents($logPath, date('[Y-m-d H:i:s] ') . "Exec failed with code $resultCode. Cmd: $cmd" . PHP_EOL, FILE_APPEND);
+        foreach ($phpPaths as $php) {
+            $cmd = "$php $scriptPath > /dev/null 2>&1 &";
+            $output = [];
+            $resultCode = 0;
+            @exec($cmd, $output, $resultCode);
+            
+            if ($resultCode === 0) {
+                $success = true;
+                file_put_contents($logPath, date('[Y-m-d H:i:s] ') . "Processo iniciado com suceso usando: $php" . PHP_EOL, FILE_APPEND);
+                break;
+            } else {
+                $lastError = "Falha com $php (code $resultCode)";
+            }
+        }
+
+        if (!$success) {
+             throw new Exception("Não foi possível iniciar o processo em segundo plano. $lastError");
         }
 
         ob_clean();
