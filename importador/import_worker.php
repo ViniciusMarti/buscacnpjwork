@@ -6,12 +6,16 @@ require_once 'mysql_sharder.php';
 class ImportWorker {
     private $bq;
     private $sharder;
-    private $stateFile = 'state.json';
-    private $progressFile = 'logs/import_progress.json';
-    private $errorLog = 'logs/import_errors.log';
+    private $stateFile;
+    private $progressFile;
+    private $errorLog;
     private $state;
 
     public function __construct($keyFilePath) {
+        $this->stateFile = __DIR__ . '/state.json';
+        $this->progressFile = __DIR__ . '/logs/import_progress.json';
+        $this->errorLog = __DIR__ . '/logs/import_errors.log';
+
         $this->bq = new BigQueryClient($keyFilePath);
         $this->sharder = new MySQLSharder();
         $this->loadState();

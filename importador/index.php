@@ -22,10 +22,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'step') {
     header('Content-Type: application/json');
     try {
         require_once 'import_worker.php';
-        $keyFile = 'buscacnpj-490113-7e0757134be9.json';
+        $keyFile = __DIR__ . '/buscacnpj-490113-7e0757134be9.json';
         
-        // We need a modified run method that only does ONE chunk/page
-        // For simplicity, let's just use the existing worker but with a limit
         $worker = new ImportWorker($keyFile);
         
         // Let's perform one iteration of the processing
