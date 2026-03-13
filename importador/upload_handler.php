@@ -35,21 +35,36 @@ foreach ($files['name'] as $key => $originalName) {
     // Usamos o caminho relativo (path) para detectar o banco, pois ele contém o nome da pasta
     $relativePath = strtolower($paths[$key] ?? $originalName);
     
-    // 1. Detectar o Shard (Banco) - Pode estar no nome da pasta ou do arquivo
-    preg_match('/buscacnpj(\d+)/', $relativePath, $matches);
+    // 1. Detectar o Shard (Banco)
+    // Procuramos por buscacnpj seguido de números (1 a 32)
+    preg_match('/buscacnpj([1-9]|[12]\d|3[0-2])(?![0-9])/', $relativePath, $matches);
     $shardNum = isset($matches[1]) ? (int)$matches[1] : null;
 
     if (!$shardNum || $shardNum < 1 || $shardNum > 32) {
-        $results['errors'][] = "Não foi possível identificar o Banco (1-32) no arquivo: $originalName";
+        $results['errors'][] = "Não foi possível identificar o Banco (1-32) no caminho: $relativePath";
         continue;
     }
 
     // 2. Detectar o Tipo
+    // Pegamos apenas o nome do arquivo final para evitar que nomes de pastas interfiram
+    $fileNameOnly = basename($relativePath);
     $detectedType = null;
-    foreach (['empresas', 'estabelecimentos', 'socios'] as $t) {
-        if (strpos($cleanName, $t) !== false) {
+    $types = ['estabelecimentos', 'empresas', 'socios']; // Ordem específica para evitar match parcial se houver
+    
+    foreach ($types as $t) {
+        if (strpos($fileNameOnly, $t) !== false) {
             $detectedType = $t;
             break;
+        }
+    }
+
+    // Fallback: Se não achou no nome do arquivo, procura no caminho todo (menos comum)
+    if (!$detectedType) {
+        foreach ($types as $t) {
+            if (strpos($relativePath, $t) !== false) {
+                $detectedType = $t;
+                break;
+            }
         }
     }
 
