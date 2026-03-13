@@ -9,7 +9,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Importador de CNPJ | Admin Panel</title>
+    <title>BigQuery -> MySQL Shards | CNPJ Import</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
@@ -281,8 +281,8 @@
     <div class="container">
         <header>
             <div class="logo">
-                <i class="fas fa-database"></i>
-                CNPJ Import System
+                <i class="fas fa-cloud"></i>
+                BigQuery -> MySQL Sharder
             </div>
             <div id="connection-status" class="status-badge status-idle">
                 <i class="fas fa-circle"></i>
@@ -367,7 +367,7 @@
                     </div>
 
                     <div id="log-console" class="log-container">
-                        <div class="log-entry"><span class="log-time">[00:00:00]</span> <span class="log-info">Sistema pronto. Clique em iniciar para começar a importação das 32 bases.</span></div>
+                        <div class="log-entry"><span class="log-time">[00:00:00]</span> <span class="log-info">Sistema de Pipeline BigQuery pronto. Certifique-se de que o arquivo 'google_keys.json' está na pasta do importador.</span></div>
                     </div>
                 </div>
             </div>
@@ -382,11 +382,11 @@
                     </div>
 
                     <div style="margin-top: 2rem;">
-                        <div class="stat-label">Info do Servidor</div>
+                        <div class="stat-label">Pipeline Info</div>
                         <div style="font-size: 0.8125rem; line-height: 1.6;">
-                            <div><i class="fas fa-server"></i> Host: u582732852</div>
-                            <div><i class="fas fa-microchip"></i> PHP 8.1+</div>
-                            <div><i class="fas fa-hdd"></i> Gzip Streaming Enabled</div>
+                            <div><i class="fab fa-google"></i> Cloud Project: buscacnpj-490113</div>
+                            <div><i class="fas fa-filter"></i> Período: 2026/02</div>
+                            <div><i class="fas fa-server"></i> MySQL: 32 Shards (Remote)</div>
                         </div>
                     </div>
                 </div>
