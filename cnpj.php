@@ -116,6 +116,48 @@ if (strlen($meta_description) > 155) {
     $meta_description = str_limit($meta_description, 155, "...");
 }
 
+// CNAE Details Lookup - Atualiza a descrição com base no novo banco
+$cnae_db = getCNAEDB();
+if ($cnae_db !== null) {
+    try {
+        // 1. Atividade Principal
+        if (!empty($data['cnae_fiscal_principal'])) {
+            $cnae_clean = preg_replace('/[^0-9]/', '', $data['cnae_fiscal_principal']);
+            // Tenta buscar no SQLite (tabela cnaes, colunas codigo e descricao)
+            $stmt_cnae = $cnae_db->prepare("SELECT descricao FROM cnaes WHERE codigo = :cnae LIMIT 1");
+            $stmt_cnae->execute([':cnae' => $cnae_clean]);
+            $cnae_info = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
+            if ($cnae_info && !empty($cnae_info['descricao'])) {
+                $data['cnae_principal_descricao'] = $cnae_info['descricao'];
+            }
+        }
+
+        // 2. Atividades Secundárias
+        $sec_str = trim($data['cnae_fiscal_secundaria']);
+        if ($sec_str) {
+            $separador_sec = strpos($sec_str, ';') !== false ? ';' : '|';
+            $sec_codes = explode($separador_sec, $sec_str);
+            $sec_com_descricao = [];
+            
+            foreach ($sec_codes as $code) {
+                $code = trim($code);
+                if (!$code) continue;
+                $code_clean = preg_replace('/[^0-9]/', '', $code);
+                $stmt_sec = $cnae_db->prepare("SELECT descricao FROM cnaes WHERE codigo = :cnae LIMIT 1");
+                $stmt_sec->execute([':cnae' => $code_clean]);
+                $res_sec = $stmt_sec->fetch(PDO::FETCH_ASSOC);
+                
+                if ($res_sec && !empty($res_sec['descricao'])) {
+                    $sec_com_descricao[] = $res_sec['descricao'] . ' (' . $code . ')';
+                } else {
+                    $sec_com_descricao[] = $code;
+                }
+            }
+            $data['secundarias_processadas'] = $sec_com_descricao;
+        }
+    } catch (Exception $e) { /* Silencioso */ }
+}
+
 // SEO Text & FAQ Generation (Programmatic SEO)
 $data_ab_formatada = (!empty($data['data_inicio_atividade']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['data_inicio_atividade'])) ? date('d/m/Y', strtotime($data['data_inicio_atividade'])) : ($data['data_inicio_atividade'] ?: 'N/A');
 $texto_sobre = "A empresa $nome de CNPJ $cnpj_f, foi fundada em $data_ab_formatada na cidade {$data['municipio']} no estado {$data['sigla_uf']}. Sua atividade principal, conforme a Receita Federal, é {$data['cnae_principal_descricao']}. Sua situação cadastral até o momento é $situacao.";
@@ -189,46 +231,6 @@ try {
 }
 
 
-// CNAE Details Lookup - Atualiza a descrição com base no novo banco
-$cnae_db = getCNAEDB();
-if ($cnae_db !== null) {
-    try {
-        // 1. Atividade Principal
-        if (!empty($data['cnae_fiscal_principal'])) {
-            $cnae_clean = preg_replace('/[^0-9]/', '', $data['cnae_fiscal_principal']);
-            $stmt_cnae = $cnae_db->prepare("SELECT Descrição FROM lista_cnae WHERE CNAE = :cnae LIMIT 1");
-            $stmt_cnae->execute([':cnae' => $cnae_clean]);
-            $cnae_info = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
-            if ($cnae_info && !empty($cnae_info['Descrição'])) {
-                $data['cnae_principal_descricao'] = $cnae_info['Descrição'];
-            }
-        }
-
-        // 2. Atividades Secundárias
-        $sec_str = trim($data['cnae_fiscal_secundaria']);
-        if ($sec_str) {
-            $separador_sec = strpos($sec_str, ';') !== false ? ';' : '|';
-            $sec_codes = explode($separador_sec, $sec_str);
-            $sec_com_descricao = [];
-            
-            foreach ($sec_codes as $code) {
-                $code = trim($code);
-                if (!$code) continue;
-                $code_clean = preg_replace('/[^0-9]/', '', $code);
-                $stmt_sec = $cnae_db->prepare("SELECT Descrição FROM lista_cnae WHERE CNAE = :cnae LIMIT 1");
-                $stmt_sec->execute([':cnae' => $code_clean]);
-                $res_sec = $stmt_sec->fetch(PDO::FETCH_ASSOC);
-                
-                if ($res_sec && !empty($res_sec['Descrição'])) {
-                    $sec_com_descricao[] = $res_sec['Descrição'] . ' (' . $code . ')';
-                } else {
-                    $sec_com_descricao[] = $code;
-                }
-            }
-            $data['secundarias_processadas'] = $sec_com_descricao;
-        }
-    } catch (Exception $e) { /* Silencioso */ }
-}
 
 $faq_schema = [
     "@context" => "https://schema.org",

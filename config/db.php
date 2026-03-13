@@ -159,10 +159,26 @@ function queryCNPJ(PDO $db, $clean, $formatted): ?array {
 }
 
 /**
- * Busca o banco de dados oficial de CNAE (assumindo que está no shard 1)
+ * Busca o banco de dados oficial de CNAE (SQLite local para performance e consistência)
  */
 function getCNAEDB(): ?PDO {
-    return getSpecificConnection('u582732852_buscacnpj1');
+    static $cnae_pdo = null;
+    if ($cnae_pdo !== null) return $cnae_pdo;
+
+    $path = __DIR__ . '/../database/cnae.db';
+    if (!file_exists($path)) {
+        return null;
+    }
+
+    try {
+        $cnae_pdo = new PDO("sqlite:" . $path);
+        $cnae_pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $cnae_pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        return $cnae_pdo;
+    } catch (PDOException $e) {
+        error_log("Erro ao conectar ao CNAE.db: " . $e->getMessage());
+        return null;
+    }
 }
 
 /**
