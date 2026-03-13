@@ -52,11 +52,12 @@ try {
     if (!$real_city_name) {
         foreach (getAllConnections() as $db_conn) {
             try {
-                $stmt_c = $db_conn->prepare("SELECT DISTINCT municipio FROM dados_cnpj WHERE sigla_uf = :sigla_uf");
+                $stmt_c = $db_conn->prepare("SELECT DISTINCT municipio FROM estabelecimentos WHERE uf = :sigla_uf");
                 $stmt_c->execute([':sigla_uf' => $uf]);
                 
                 while($row = $stmt_c->fetch(PDO::FETCH_ASSOC)) {
                     $name = $row['municipio'];
+
                     // Normalização p/ conferir slug (mesma lógica do pre_aquecer)
                     $s = strtolower(str_replace(' ', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $name)));
                     $s = preg_replace('/[^a-z0-9-]/', '', $s);
@@ -79,10 +80,12 @@ try {
 
     // 1. Stats Gerais da Cidade (Distribuído)
     $stats_cid = aggregateDistributed("
-        SELECT COUNT(*) as count_total, SUM(capital_social) as capital_total 
-        FROM dados_cnpj 
-        WHERE situacao_cadastral = 'ATIVA' AND sigla_uf = :sigla_uf AND municipio = :city
+        SELECT COUNT(*) as count_total, SUM(e.capital_social) as capital_total 
+        FROM estabelecimentos est 
+        INNER JOIN empresas e ON est.cnpj_basico = e.cnpj_basico
+        WHERE est.situacao_cadastral = 'ATIVA' AND est.uf = :sigla_uf AND est.municipio = :city
     ", [':sigla_uf' => $uf, ':city' => $real_city_name]);
+
 
     $count_total = $stats_cid['count_total'] ?: 0;
     $capital_total = $stats_cid['capital_total'] ?: 0;
@@ -91,19 +94,37 @@ try {
     $cnae_map = [];
     foreach (getAllConnections() as $db) {
         try {
-            $stmt_cnae = $db->prepare("SELECT cnae_principal_descricao, COUNT(*) as c FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA' AND sigla_uf = :sigla_uf AND municipio = :city AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+            $stmt_cnae = $db->prepare("SELECT cnae_principal as cnae, COUNT(*) as c FROM estabelecimentos WHERE situacao_cadastral = 'ATIVA' AND uf = :sigla_uf AND municipio = :city GROUP BY cnae_principal ORDER BY c DESC LIMIT 1");
             $stmt_cnae->execute([':sigla_uf' => $uf, ':city' => $real_city_name]);
             $r = $stmt_cnae->fetch(PDO::FETCH_ASSOC);
-            if ($r) $cnae_map[$r['cnae_principal_descricao']] = ($cnae_map[$r['cnae_principal_descricao']] ?? 0) + $r['c'];
+            if ($r) {
+                // Tenta traduzir o CNAE
+                $desc = 'Setor Não Informado';
+                $cnae_db = getCNAEDB();
+                if ($cnae_db) {
+                    $stmt_d = $cnae_db->prepare("SELECT descricao FROM cnaes WHERE codigo = ? LIMIT 1");
+                    $stmt_d->execute([preg_replace('/\D/', '', $r['cnae'])]);
+                    $res_d = $stmt_d->fetch();
+                    if ($res_d) $desc = $res_d['descricao'];
+                }
+                $cnae_map[$desc] = ($cnae_map[$desc] ?? 0) + $r['c'];
+            }
         } catch (Exception $e) {
             continue;
         }
     }
+
     arsort($cnae_map);
     $top_cnae = !empty($cnae_map) ? ['cnae_principal_descricao' => key($cnae_map), 'c' => current($cnae_map)] : null;
 
     // 3. Ranking Top 100 da Cidade (Distribuído)
-    $ranking = fetchAllDistributed("SELECT * FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA' AND sigla_uf = :sigla_uf AND municipio = :city", [':sigla_uf' => $uf, ':city' => $real_city_name], 'capital_social', 'DESC', 100);
+    $ranking = fetchAllDistributed("
+        SELECT est.cnpj, e.razao_social, e.capital_social, est.situacao_cadastral 
+        FROM estabelecimentos est 
+        INNER JOIN empresas e ON est.cnpj_basico = e.cnpj_basico
+        WHERE est.situacao_cadastral = 'ATIVA' AND est.uf = :sigla_uf AND est.municipio = :city", 
+        [':sigla_uf' => $uf, ':city' => $real_city_name], 'e.capital_social', 'DESC', 100);
+
 
 
 } catch (PDOException $e) {

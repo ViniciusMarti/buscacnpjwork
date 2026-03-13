@@ -202,9 +202,10 @@ try {
     if ($is_matriz) {
         // Busca filiais ATIVAS (limitado para performance e UX)
         foreach ($connections as $db) {
-            $stmt_unidades = $db->prepare("SELECT cnpj, municipio, sigla_uf FROM dados_cnpj WHERE cnpj LIKE :base AND cnpj != :atual AND situacao_cadastral = 'ATIVA' LIMIT 50");
+            $stmt_unidades = $db->prepare("SELECT cnpj, municipio, uf as sigla_uf FROM estabelecimentos WHERE cnpj LIKE :base AND cnpj != :atual AND situacao_cadastral = 'ATIVA' LIMIT 50");
             $stmt_unidades->execute([':base' => $cnpj_base . '%', ':atual' => $cnpj]);
             $res = $stmt_unidades->fetchAll(PDO::FETCH_ASSOC);
+
             if ($res) {
                 $outras_unidades = array_merge($outras_unidades, $res);
             }
@@ -216,11 +217,12 @@ try {
     } else {
         // Busca a Matriz
         foreach ($connections as $db) {
-            $stmt_matriz = $db->prepare("SELECT cnpj, municipio, sigla_uf FROM dados_cnpj WHERE cnpj LIKE :matriz_padrao LIMIT 1");
-            $stmt_matriz->execute([':matriz_padrao' => $cnpj_base . '0001%']);
+            $stmt_matriz = $db->prepare("SELECT cnpj, municipio, uf as sigla_uf FROM estabelecimentos WHERE cnpj = :matriz_padrao LIMIT 1");
+            $stmt_matriz->execute([':matriz_padrao' => $cnpj_base . '0001']);
             $dados_matriz = $stmt_matriz->fetch(PDO::FETCH_ASSOC);
             if ($dados_matriz) break;
         }
+
     }
 } catch (Exception $e) {
     // Silencioso

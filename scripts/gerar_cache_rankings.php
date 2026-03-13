@@ -30,10 +30,12 @@ foreach ($states as $slug => $uf) {
         $main_data = aggregateDistributed("
             SELECT 
                 COUNT(*) as total_count, 
-                SUM(capital_social) as total_capital
-            FROM dados_cnpj 
-            WHERE situacao_cadastral = 'ATIVA' AND sigla_uf = :uf
+                SUM(e.capital_social) as total_capital
+            FROM estabelecimentos est
+            INNER JOIN empresas e ON est.cnpj_basico = e.cnpj_basico
+            WHERE est.situacao_cadastral = 'ATIVA' AND est.uf = :uf
         ", [':uf' => $uf]);
+
 
         $count_total = $main_data['total_count'] ?: 0;
         $capital_total = $main_data['total_capital'] ?: 0;
@@ -42,7 +44,8 @@ foreach ($states as $slug => $uf) {
         $city_map = [];
         foreach (getAllConnections() as $db_conn) {
             try {
-                $stmt = $db_conn->prepare("SELECT municipio, COUNT(*) as total FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA' AND sigla_uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+                $stmt = $db_conn->prepare("SELECT municipio, COUNT(*) as total FROM estabelecimentos WHERE situacao_cadastral = 'ATIVA' AND uf = :uf GROUP BY municipio ORDER BY total DESC LIMIT 10");
+
                 $stmt->execute([':uf' => $uf]);
                 foreach ($stmt->fetchAll() as $r) {
                     $city_map[$r['municipio']] = ($city_map[$r['municipio']] ?? 0) + $r['total'];
@@ -64,7 +67,8 @@ foreach ($states as $slug => $uf) {
         $cnae_map = [];
         foreach (getAllConnections() as $db_conn) {
             try {
-                $stmt = $db_conn->prepare("SELECT cnae_principal_descricao as cnae, COUNT(*) as c FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA' AND sigla_uf = :uf AND cnae_principal_descricao NOT LIKE 'Consulte%' GROUP BY cnae_principal_descricao ORDER BY c DESC LIMIT 1");
+                $stmt = $db_conn->prepare("SELECT cnae_principal as cnae, COUNT(*) as c FROM estabelecimentos WHERE situacao_cadastral = 'ATIVA' AND uf = :uf GROUP BY cnae_principal ORDER BY c DESC LIMIT 1");
+
                 $stmt->execute([':uf' => $uf]);
                 $r = $stmt->fetch();
                 if ($r) $cnae_map[$r['cnae']] = ($cnae_map[$r['cnae']] ?? 0) + $r['c'];
@@ -73,8 +77,19 @@ foreach ($states as $slug => $uf) {
             }
         }
         arsort($cnae_map);
-        $top_cnae_name = !empty($cnae_map) ? key($cnae_map) : 'Nenhum';
-        $top_cnae = ['cnae_principal_descricao' => $top_cnae_name, 'c' => $cnae_map[$top_cnae_name] ?? 0];
+        $top_cnae_code = !empty($cnae_map) ? key($cnae_map) : '0000000';
+        $top_cnae = ['cnae_fiscal_principal' => $top_cnae_code, 'c' => $cnae_map[$top_cnae_code] ?? 0];
+        
+        // Tentar obter descrição do CNAE principal via SQLite
+        $top_cnae['cnae_principal_descricao'] = 'Atividade Não Informada';
+        $cnae_db = getCNAEDB();
+        if ($cnae_db) {
+            $stmt_c = $cnae_db->prepare("SELECT descricao FROM cnaes WHERE codigo = ? LIMIT 1");
+            $stmt_c->execute([preg_replace('/\D/', '', $top_cnae_code)]);
+            $res_c = $stmt_c->fetch();
+            if ($res_c) $top_cnae['cnae_principal_descricao'] = $res_c['descricao'];
+        }
+
 
 
         $stats = [
@@ -104,7 +119,13 @@ echo "Processando Ranking Nacional (Brasil)... ";
 try {
     $start_br = microtime(true);
     // Busca as 10 maiores do Brasil em todos os bancos
-    $top_br = fetchAllDistributed("SELECT * FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA' AND capital_social > 0", [], 'capital_social', 'DESC', 10);
+    $top_br = fetchAllDistributed("
+        SELECT est.cnpj, e.razao_social, est.uf as sigla_uf, e.capital_social 
+        FROM estabelecimentos est 
+        INNER JOIN empresas e ON est.cnpj_basico = e.cnpj_basico 
+        WHERE est.situacao_cadastral = 'ATIVA' AND e.capital_social > 0
+    ", [], 'e.capital_social', 'DESC', 10);
+
 
     
     $cache_file_br = $cache_dir . '/stats_brazil.json';

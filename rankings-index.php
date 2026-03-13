@@ -23,7 +23,13 @@ try {
 
     if (!$top_br) {
         // Pegar top 10 maiores empresas do Brasil (Geral) - Busca Distribuída
-        $top_br = fetchAllDistributed("SELECT * FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA' AND capital_social > 0", [], 'capital_social', 'DESC', 10);
+        $top_br = fetchAllDistributed("
+            SELECT est.cnpj, e.razao_social, est.uf as sigla_uf, e.capital_social 
+            FROM estabelecimentos est 
+            INNER JOIN empresas e ON est.cnpj_basico = e.cnpj_basico 
+            WHERE est.situacao_cadastral = 'ATIVA' AND e.capital_social > 0
+        ", [], 'e.capital_social', 'DESC', 10);
+
         file_put_contents($cache_file, json_encode($top_br));
     }
 
@@ -33,7 +39,13 @@ try {
     if (file_exists($cache_stats_file) && (time() - filemtime($cache_stats_file) < $cache_time)) {
         $br_stats = json_decode(file_get_contents($cache_stats_file), true);
     } else {
-        $br_stats = aggregateDistributed("SELECT COUNT(*) as t, SUM(capital_social) as s FROM dados_cnpj WHERE situacao_cadastral = 'ATIVA'", []);
+        $br_stats = aggregateDistributed("
+            SELECT COUNT(*) as t, SUM(e.capital_social) as s 
+            FROM estabelecimentos est 
+            INNER JOIN empresas e ON est.cnpj_basico = e.cnpj_basico 
+            WHERE est.situacao_cadastral = 'ATIVA'
+        ", []);
+
         file_put_contents($cache_stats_file, json_encode($br_stats));
     }
 

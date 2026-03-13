@@ -16,8 +16,9 @@ if (!is_dir($cache_dir)) {
 try {
     echo "Consultando total de empresas em todos os bancos MySQL...\n";
     
-    // Consulta real agregada
-    $res = aggregateDistributed("SELECT COUNT(*) as total FROM dados_cnpj", []);
+    // Consulta real agregada - Usamos estabelecimentos para contar todas as unidades
+    $res = aggregateDistributed("SELECT COUNT(*) as total FROM estabelecimentos", []);
+
     $total = $res['total'] ?: 0;
 
 
