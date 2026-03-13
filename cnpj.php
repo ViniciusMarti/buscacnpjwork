@@ -276,7 +276,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 
-<header><div class="header-inner"><a class="logo" href="/" aria-label="BuscaCNPJ Grátis - Ir para a página inicial">Busca<span>CNPJ</span> Grátis</a><nav><a href="/"><i class="fa-solid fa-house mr-1"></i> Início</a><a href="/rankings/"><i class="fa-solid fa-chart-simple mr-1"></i> Rankings</a><a href="/analises/"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Análises</a><a href="/sobre/"><i class="fa-solid fa-circle-info mr-1"></i> Sobre</a></nav></div></header>
+<header><div class="header-inner"><a class="logo" href="/" aria-label="BuscaCNPJ Grátis - Ir para a página inicial">Busca<span>CNPJ</span> Grátis</a><nav><a href="/"><i class="fa-solid fa-house mr-1"></i> Início</a><a href="/rankings/"><i class="fa-solid fa-chart-simple mr-1"></i> Rankings</a><a href="/analises/"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Análises</a></nav></div></header>
 <div class="page-wrap fade-up">
     <nav aria-label="Breadcrumb" class="bc">
         <a href="/">Início</a> 
@@ -529,7 +529,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
 </div>
-<footer><nav><a href="/">Início</a><a href="/rankings/">Rankings</a><a href="/sobre/">Sobre</a><a href="/privacidade/">Privacidade</a><a href="/contato/">Contato</a></nav><p>© 2026 BuscaCNPJ Gratis — Todos os direitos reservados.</p></footer>
+<footer><nav><a href="/">Início</a><a href="/rankings/">Rankings</a><a href="/privacidade/">Privacidade</a><a href="/contato/">Contato</a></nav><p>© 2026 BuscaCNPJ Gratis — Todos os direitos reservados.</p></footer>
 <script>
 function copyText(txt, btn) {
     navigator.clipboard.writeText(txt).then(() => {
