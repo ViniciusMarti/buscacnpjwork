@@ -6,17 +6,32 @@ $stateFile = 'state.json';
 
 // Handle Start Request
 if (isset($_GET['action']) && $_GET['action'] == 'start') {
-    // Start the process in the background
-    // On Hostinger/Linux:
-    $cmd = "php " . __DIR__ . "/cron_import.php > /dev/null 2>&1 &";
-    exec($cmd);
-    echo json_encode(['status' => 'started']);
+    header('Content-Type: application/json');
+    try {
+        // Start the process in the background
+        $phpBinary = 'php'; // Standard for Hostinger CLI
+        $scriptPath = __DIR__ . "/cron_import.php";
+        
+        if (!file_exists($scriptPath)) {
+            throw new Exception("Script cron_import.php não encontrado.");
+        }
+
+        // Hostinger specific background execution
+        $cmd = "$phpBinary $scriptPath > /dev/null 2>&1 &";
+        exec($cmd, $output, $resultCode);
+
+        echo json_encode(['status' => 'started', 'msg' => 'Processo disparado']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'msg' => $e->getMessage()]);
+    }
     exit;
 }
 
 // Handle Progress Polling
 if (isset($_GET['action']) && $_GET['action'] == 'poll') {
-    $progress = file_exists($progressFile) ? json_decode(file_get_contents($progressFile), true) : ['status' => 'idle'];
+    header('Content-Type: application/json');
+    $progress = file_exists($progressFile) ? json_decode(file_get_contents($progressFile), true) : ['status' => 'idle', 'records_imported' => 0, 'speed' => 0];
     $state = file_exists($stateFile) ? json_decode(file_get_contents($stateFile), true) : [];
     echo json_encode(['progress' => $progress, 'state' => $state]);
     exit;
