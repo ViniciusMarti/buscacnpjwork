@@ -75,24 +75,44 @@ foreach ($files['name'] as $key => $originalName) {
 
     // 3. Definir Destino
     $targetDir = "{$BASE_SHARDS_PATH}/buscacnpj{$shardNum}";
+    
+    // Tenta criar o diretório se não existir com permissões amplas
     if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0777, true);
+        if (!mkdir($targetDir, 0777, true)) {
+            $results['errors'][] = "Erro: Sem permissão para criar pasta do Banco {$shardNum} em: $targetDir";
+            continue;
+        }
+        chmod($targetDir, 0777);
+    }
+
+    // Verifica se a pasta tem permissão de escrita
+    if (!is_writable($targetDir)) {
+        chmod($targetDir, 0777); // Tenta corrigir na hora
+        if (!is_writable($targetDir)) {
+            $results['errors'][] = "Erro: Pasta do Banco {$shardNum} não permite escrita.";
+            continue;
+        }
     }
 
     // Salva sempre no formato padrão que o importador espera
     $finalFileName = "{$detectedType}.csv.gz";
-    // Se o arquivo original não for .gz, ele salva como .csv (o worker já lida com isso)
-    if (strpos($cleanName, '.gz') === false && strpos($cleanName, '.zip') === false) {
+    if (strpos($relativePath, '.gz') === false && strpos($relativePath, '.zip') === false) {
         $finalFileName = "{$detectedType}.csv";
     }
 
     $targetFile = "{$targetDir}/{$finalFileName}";
 
+    // Se já existe, tenta apagar antes (evita conflito de permissão em sobrescrita)
+    if (file_exists($targetFile)) {
+        @unlink($targetFile);
+    }
+
     if (move_uploaded_file($files['tmp_name'][$key], $targetFile)) {
-        chmod($targetFile, 0644);
+        chmod($targetFile, 0666);
         $results['uploaded'][] = "Banco {$shardNum} > {$finalFileName}";
     } else {
-        $results['errors'][] = "Erro ao mover arquivo: $originalName";
+        $uploadErrValue = $files['error'][$key];
+        $results['errors'][] = "Erro ao mover arquivo para {$targetFile} (PHP Error: {$uploadErrValue}). Verifique permissões da pasta shards.";
     }
 }
 
