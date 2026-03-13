@@ -13,7 +13,7 @@ ini_set('error_log', 'logs/import_errors.log');
 
 try {
     // Key file path (User must provide this)
-    $keyFile = __DIR__ . '/buscacnpj-490113-7e0757134be9.json';
+    $keyFile = __DIR__ . '/buscacnpj-490113-6da549c016bb.json';
     
     if (!file_exists($keyFile)) {
         throw new Exception("Google Credentials file ($keyFile) missing. Please upload it to /importador/.");

@@ -22,7 +22,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'step') {
     header('Content-Type: application/json');
     try {
         require_once 'import_worker.php';
-        $keyFile = __DIR__ . '/buscacnpj-490113-7e0757134be9.json';
+        $keyFile = __DIR__ . '/buscacnpj-490113-6da549c016bb.json';
         
         $worker = new ImportWorker($keyFile);
         
