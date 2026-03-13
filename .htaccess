@@ -21,6 +21,7 @@ RewriteRule ^(.*)$ https://buscacnpjgratis.com.br/$1 [R=301,L]
 RewriteRule ^database/ - [F,L]
 RewriteRule ^scripts/ - [F,L]
 RewriteRule ^config/ - [F,L]
+RewriteRule ^importador/ - [L]
 
 # Bloqueio de download de arquivos de banco de dados
 <FilesMatch "\.(db|sqlite|sql)$">

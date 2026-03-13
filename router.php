@@ -23,7 +23,7 @@ if ($path === '/rankings' || $path === '/rankings/') {
 }
 
 // 3. Excluir pastas físicas conhecidas para não confundir com estados
-$reserved = ['assets', 'config', 'database', 'scripts', 'sitemaps', 'contato', 'privacidade', 'sobre', 'analises'];
+$reserved = ['assets', 'config', 'database', 'scripts', 'sitemaps', 'contato', 'privacidade', 'sobre', 'analises', 'importador'];
 $first_part = explode('/', ltrim($path, '/'))[0];
 
 if (!in_array($first_part, $reserved)) {
