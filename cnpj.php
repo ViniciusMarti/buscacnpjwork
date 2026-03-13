@@ -385,7 +385,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Google Maps Card -->
     <div class="info-box fade-up" style="margin-top: 24px; padding: 0; overflow: hidden; border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-lg); position: relative;">
-        <div style="position: absolute; top: 15px; left: 15px; z-index: 10; background: var(--surface); padding: 8px 16px; border-radius: 100px; font-size: 0.75rem; font-weight: 800; color: var(--primary); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+        <div style="background: var(--surface); padding: 12px 20px; border-bottom: 1px solid var(--border); font-size: 0.75rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 8px;">
             <i class="fa-solid fa-location-dot"></i> LOCALIZAÇÃO NO MAPA
         </div>
         <iframe 
