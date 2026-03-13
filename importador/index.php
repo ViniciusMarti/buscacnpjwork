@@ -536,64 +536,66 @@
             e.preventDefault();
             if (fileInput.files.length === 0) return alert('Selecione uma pasta ou arquivos primeiro');
             
-            const formData = new FormData();
-            // Adicionamos os arquivos manualmente para capturar o webkitRelativePath se disponível
-            for (let i = 0; i < fileInput.files.length; i++) {
-                const file = fileInput.files[i];
-                formData.append('files[]', file);
-                // Enviamos o caminho relativo para o PHP saber em qual subpasta o arquivo estava
-                formData.append('paths[]', file.webkitRelativePath || file.name);
+            const files = Array.from(fileInput.files);
+            const totalFiles = files.length;
+            
+            uploadStatus.innerHTML = `<span style="color: var(--warning)">Preparando envio de ${totalFiles} arquivos sequencialmente...</span>`;
+            uploadProgressContainer.style.display = 'block';
+            
+            let uploadedCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < totalFiles; i++) {
+                const file = files[i];
+                const relativePath = file.webkitRelativePath || file.name;
+                
+                uploadStatus.innerHTML = `<div style="color: var(--primary)">Enviando (${i+1}/${totalFiles}):</div><div style="font-size: 0.75rem; color: var(--text-muted)">${relativePath}</div>`;
+                
+                try {
+                    const result = await uploadSingleFile(file, relativePath);
+                    if (result.success && result.uploaded.length) {
+                        uploadedCount++;
+                        addLog(`Concluído (${i+1}/${totalFiles}): ${relativePath}`, 'success');
+                    } else {
+                        errorCount++;
+                        addLog(`Erro no arquivo ${relativePath}: ${result.errors ? result.errors[0] : 'Erro desconhecido'}`, 'error');
+                    }
+                } catch (err) {
+                    errorCount++;
+                    addLog(`Falha crítica no envio de ${relativePath}`, 'error');
+                }
+                
+                const overallPercent = Math.round(((i + 1) / totalFiles) * 100);
+                uploadProgressBar.style.width = overallPercent + '%';
             }
 
-            uploadStatus.innerHTML = '<span style="color: var(--warning)">Processando e enviando pasta... isso pode demorar dependendo do tamanho.</span>';
-            uploadProgressContainer.style.display = 'block';
-            uploadProgressBar.style.width = '0%';
+            uploadStatus.innerHTML = `<div style="color: var(--success); font-weight: bold;">Processo finalizado!</div>
+                                     <div style="font-size: 0.8rem; margin-top: 5px;">✅ ${uploadedCount} enviados com sucesso.<br>❌ ${errorCount} falhas.</div>`;
+            
+            setTimeout(() => { uploadProgressContainer.style.display = 'none'; }, 10000);
+        });
 
-            try {
+        async function uploadSingleFile(file, relativePath) {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('files[]', file);
+                formData.append('paths[]', relativePath);
+
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', 'upload_handler.php', true);
-
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        uploadProgressBar.style.width = percent + '%';
-                        if (percent === 100) uploadStatus.innerHTML = '<span style="color: var(--warning)">Upload concluído. Finalizando no servidor...</span>';
-                    }
-                };
-
+                
                 xhr.onload = function() {
-                    console.log('Resposta bruta do servidor:', xhr.responseText);
                     try {
-                        const result = JSON.parse(xhr.responseText);
-                        let html = '';
-                        if (result.uploaded && result.uploaded.length) {
-                            html += `<div style="color: var(--success); margin-bottom: 5px;">✅ Sucesso (${result.uploaded.length}):</div>`;
-                            result.uploaded.forEach(item => {
-                                html += `<div style="padding-left: 10px; font-size: 0.75rem;">• ${item}</div>`;
-                                addLog(`Upload concluído: ${item}`, 'success');
-                            });
-                        }
-                        if (result.errors && result.errors.length) {
-                            html += `<div style="color: var(--danger); margin-top: 10px;">❌ Erros (${result.errors.length}):</div>`;
-                            result.errors.forEach(err => {
-                                html += `<div style="padding-left: 10px; font-size: 0.75rem;">• ${err}</div>`;
-                                addLog(err, 'error');
-                            });
-                        }
-                        if (!html) html = '<span style="color: var(--danger)">Nenhum arquivo processado. Verifique os nomes das pastas.</span>';
-                        uploadStatus.innerHTML = html;
+                        resolve(JSON.parse(xhr.responseText));
                     } catch (e) {
-                        console.error('Erro ao processar JSON:', e);
-                        uploadStatus.innerHTML = `<span style="color: var(--danger)">Erro na resposta do servidor. <br><small>Verifique os limites de upload (php.ini) ou se a pasta é muito grande.</small></span>`;
+                        resolve({success: false, errors: ['Resposta inválida do servidor ao processar este arquivo.']});
                     }
-                    setTimeout(() => { uploadProgressContainer.style.display = 'none'; }, 8000);
                 };
-
+                
+                xhr.onerror = () => reject(new Error('Erro de conexão'));
                 xhr.send(formData);
-            } catch (err) {
-                uploadStatus.innerHTML = '<span style="color: var(--danger)">Erro inesperado.</span>';
-            }
-        });
+            });
+        }
 
         // Initial fetch to show progress if already running or partially done
         fetchProgress();
