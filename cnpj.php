@@ -110,11 +110,7 @@ if (strlen($meta_title) > 60) {
     $meta_title = "$short_nome - CNPJ $cnpj_f - $situacao";
 }
 
-$cidade_uf = ($data['municipio'] && $data['sigla_uf']) ? $data['municipio'] . '/' . $data['sigla_uf'] : ($data['municipio'] ?: $data['sigla_uf'] ?: 'Brasil');
-$meta_description = "Dados completos da $nome (CNPJ $cnpj_f). Confira o endereço em $cidade_uf, situação cadastral $situacao, CNAE, capital social e quadro de sócios.";
-if (strlen($meta_description) > 155) {
-    $meta_description = str_limit($meta_description, 155, "...");
-}
+$meta_description = str_limit($texto_sobre, 155, "...");
 
 // CNAE Details Lookup - Atualiza a descrição com base no novo banco
 $cnae_db = getCNAEDB();
