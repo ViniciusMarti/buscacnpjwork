@@ -562,28 +562,31 @@
                 };
 
                 xhr.onload = function() {
+                    console.log('Resposta bruta do servidor:', xhr.responseText);
                     try {
                         const result = JSON.parse(xhr.responseText);
                         let html = '';
-                        if (result.uploaded.length) {
+                        if (result.uploaded && result.uploaded.length) {
                             html += `<div style="color: var(--success); margin-bottom: 5px;">✅ Sucesso (${result.uploaded.length}):</div>`;
                             result.uploaded.forEach(item => {
                                 html += `<div style="padding-left: 10px; font-size: 0.75rem;">• ${item}</div>`;
                                 addLog(`Upload concluído: ${item}`, 'success');
                             });
                         }
-                        if (result.errors.length) {
+                        if (result.errors && result.errors.length) {
                             html += `<div style="color: var(--danger); margin-top: 10px;">❌ Erros (${result.errors.length}):</div>`;
                             result.errors.forEach(err => {
                                 html += `<div style="padding-left: 10px; font-size: 0.75rem;">• ${err}</div>`;
                                 addLog(err, 'error');
                             });
                         }
+                        if (!html) html = '<span style="color: var(--danger)">Nenhum arquivo processado. Verifique os nomes das pastas.</span>';
                         uploadStatus.innerHTML = html;
                     } catch (e) {
-                        uploadStatus.innerHTML = '<span style="color: var(--danger)">Erro na resposta do servidor.</span>';
+                        console.error('Erro ao processar JSON:', e);
+                        uploadStatus.innerHTML = `<span style="color: var(--danger)">Erro na resposta do servidor. <br><small>Verifique os limites de upload (php.ini) ou se a pasta é muito grande.</small></span>`;
                     }
-                    setTimeout(() => { uploadProgressContainer.style.display = 'none'; }, 5000);
+                    setTimeout(() => { uploadProgressContainer.style.display = 'none'; }, 8000);
                 };
 
                 xhr.send(formData);
