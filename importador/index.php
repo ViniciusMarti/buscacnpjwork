@@ -11,19 +11,29 @@ if (isset($_GET['action']) && $_GET['action'] == 'start') {
     try {
         $phpBinary = 'php';
         $scriptPath = __DIR__ . "/cron_import.php";
+        $logPath = __DIR__ . "/logs/import_errors.log";
         
         if (!file_exists($scriptPath)) {
             throw new Exception("Script cron_import.php não encontrado.");
         }
 
+        // Tentar capturar qualquer erro do comando exec
         $cmd = "$phpBinary $scriptPath > /dev/null 2>&1 &";
+        $output = [];
+        $resultCode = 0;
         @exec($cmd, $output, $resultCode);
+
+        // Se o exec falhou e retornou algo
+        if ($resultCode !== 0) {
+            file_put_contents($logPath, date('[Y-m-d H:i:s] ') . "Exec failed with code $resultCode. Cmd: $cmd" . PHP_EOL, FILE_APPEND);
+        }
 
         ob_clean();
         echo json_encode(['status' => 'started', 'msg' => 'Processo disparado']);
     } catch (Exception $e) {
         ob_clean();
         http_response_code(500);
+        file_put_contents(__DIR__ . "/logs/import_errors.log", date('[Y-m-d H:i:s] ') . "Start Error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
         echo json_encode(['status' => 'error', 'msg' => $e->getMessage()]);
     }
     exit;
