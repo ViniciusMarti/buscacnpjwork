@@ -6,22 +6,23 @@ $stateFile = 'state.json';
 
 // Handle Start Request
 if (isset($_GET['action']) && $_GET['action'] == 'start') {
+    ob_start();
     header('Content-Type: application/json');
     try {
-        // Start the process in the background
-        $phpBinary = 'php'; // Standard for Hostinger CLI
+        $phpBinary = 'php';
         $scriptPath = __DIR__ . "/cron_import.php";
         
         if (!file_exists($scriptPath)) {
             throw new Exception("Script cron_import.php não encontrado.");
         }
 
-        // Hostinger specific background execution
         $cmd = "$phpBinary $scriptPath > /dev/null 2>&1 &";
-        exec($cmd, $output, $resultCode);
+        @exec($cmd, $output, $resultCode);
 
+        ob_clean();
         echo json_encode(['status' => 'started', 'msg' => 'Processo disparado']);
     } catch (Exception $e) {
+        ob_clean();
         http_response_code(500);
         echo json_encode(['status' => 'error', 'msg' => $e->getMessage()]);
     }
@@ -30,9 +31,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'start') {
 
 // Handle Progress Polling
 if (isset($_GET['action']) && $_GET['action'] == 'poll') {
+    ob_start();
     header('Content-Type: application/json');
     $progress = file_exists($progressFile) ? json_decode(file_get_contents($progressFile), true) : ['status' => 'idle', 'records_imported' => 0, 'speed' => 0];
     $state = file_exists($stateFile) ? json_decode(file_get_contents($stateFile), true) : [];
+    ob_clean();
     echo json_encode(['progress' => $progress, 'state' => $state]);
     exit;
 }
@@ -339,12 +342,25 @@ if (isset($_GET['action']) && $_GET['action'] == 'poll') {
         
         try {
             const res = await fetch('?action=start');
-            const data = await res.json();
-            if (data.status === 'started') {
-                addLog('Processo disparado em segundo plano.');
+            const text = await res.text();
+            
+            try {
+                const data = JSON.parse(text);
+                if (data.status === 'started') {
+                    addLog('Processo disparado em segundo plano.');
+                } else {
+                    addLog('Erro: ' + (data.msg || 'Desconhecido'), 'log-error');
+                    btnStart.disabled = false;
+                }
+            } catch (jsonErr) {
+                addLog('Erro de Resposta: Resposta do servidor não é JSON.', 'log-error');
+                console.error('Invalid JSON:', text);
+                addLog('Dica: O servidor pode estar exibindo um erro PHP. Verifique logs/import_errors.log', 'log-error');
+                btnStart.disabled = false;
             }
         } catch (e) {
-            addLog('Erro ao iniciar: ' + e.message, 'log-error');
+            addLog('Erro de Rede: ' + e.message, 'log-error');
+            btnStart.disabled = false;
         }
     };
 
