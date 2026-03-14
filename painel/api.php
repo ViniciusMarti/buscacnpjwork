@@ -9,37 +9,8 @@ if (!file_exists($statusFile)) {
     exit;
 }
 
+// No more 32 DB connections here. 
+// The worker will update the sizes in the JSON occasionally.
 $status=json_decode(file_get_contents($statusFile),true);
-
-foreach($status["db"] as $db=>$dados){
- // Note: Connecting to 32 DBs per request might be slow.
- // In a real scenario, we might want to cache this or update it in the worker.
- try {
-     $conn=@new mysqli("localhost",$db,"qPMwBp#WW*BN6k",$db);
-
-     if ($conn->connect_error) {
-         $status["db"][$db]["size"] = "Error";
-         continue;
-     }
-
-     $q=$conn->query("
-     SELECT
-     ROUND(SUM(data_length+index_length)/1024/1024,2) size
-     FROM information_schema.tables
-     WHERE table_schema='$db'
-     ");
-
-     if ($q) {
-         $r=$q->fetch_assoc();
-         $status["db"][$db]["size"]=$r["size"] ?? 0;
-     } else {
-         $status["db"][$db]["size"] = 0;
-     }
-     
-     $conn->close();
- } catch (Exception $e) {
-     $status["db"][$db]["size"] = 0;
- }
-}
 
 echo json_encode($status);

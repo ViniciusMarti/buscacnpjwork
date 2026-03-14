@@ -4,6 +4,12 @@ set_time_limit(0);
 ignore_user_abort(true);
 ini_set('memory_limit','1024M');
 
+$lockFile = __DIR__ . "/worker.lock";
+$lockHandle = fopen($lockFile, 'w');
+if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    die("Erro: Outra instância do worker já está rodando.");
+}
+
 $password="qPMwBp#WW*BN6k";
 
 $bancos=[];
@@ -16,7 +22,21 @@ function status(){
 }
 
 function salvar($s){
- file_put_contents(__DIR__ . "/status.json",json_encode($s));
+ file_put_contents(__DIR__ . "/status.json",json_encode($s), LOCK_EX);
+}
+
+function updateSize($dbIndex, &$s) {
+    global $bancos, $password;
+    $db = $bancos[$dbIndex];
+    $conn = @new mysqli("localhost", $db, $password, $db);
+    if ($conn && !$conn->connect_error) {
+        $q = $conn->query("SELECT ROUND(SUM(data_length+index_length)/1024/1024,2) size FROM information_schema.tables WHERE table_schema='$db'");
+        if ($q) {
+            $r = $q->fetch_assoc();
+            $s["db"][$db]["size"] = $r["size"] ?? 0;
+        }
+        $conn->close();
+    }
 }
 
 function conn($db){
@@ -59,7 +79,8 @@ function importar($pasta,$tabela){
   $header=str_getcsv($headerLine);
 
   $rows=[];
-  $batch=2000;
+  $batch=5000; // Increased batch size
+  $countBatch = 0;
 
   while(!gzeof($gz)){
 
@@ -83,7 +104,7 @@ function importar($pasta,$tabela){
          $values[]="('".implode("','",$esc)."')";
         }
 
-        $sql="INSERT INTO $tabela ($cols) VALUES ".implode(",",$values);
+        $sql="INSERT IGNORE INTO $tabela ($cols) VALUES ".implode(",",$values);
         $conn->query($sql);
         $conn->close();
 
@@ -95,7 +116,13 @@ function importar($pasta,$tabela){
          $s["velocidade"]=round($s["linhas"]/$tempo);
         }
 
-        salvar($s);
+        $countBatch++;
+        // Update status in file only every 5 batches to avoid excessive I/O
+        // And update DB size only occasionally
+        if ($countBatch % 5 == 0) {
+            updateSize($bancoIndex, $s);
+            salvar($s);
+        }
     }
 
     $rows=[];
@@ -106,9 +133,13 @@ function importar($pasta,$tabela){
 
   }
 
+  // Final status save for the file
+  salvar($s);
   gzclose($gz);
  }
-
+ // Final status save for the phase
+ updateSize($bancoIndex, $s);
+ salvar($s);
 }
 
 // Update phase in status
