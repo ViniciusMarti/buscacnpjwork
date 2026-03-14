@@ -95,7 +95,16 @@ class BigQueryClient {
             throw new Exception("BigQuery Query API Error ($httpCode): " . $response);
         }
 
-        return json_decode($response, true);
+        $data = json_decode($response, true);
+        
+        // Se a query demorar, precisamos esperar ela completar
+        while (isset($data['jobComplete']) && $data['jobComplete'] === false) {
+            sleep(1);
+            $jobId = $data['jobReference']['jobId'];
+            $data = $this->getQueryResults($jobId);
+        }
+
+        return $data;
     }
 
     public function getQueryResults($jobId, $pageToken = null) {

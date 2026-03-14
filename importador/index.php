@@ -319,7 +319,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'poll') {
                 const p = data.progress;
                 document.getElementById('val-table').textContent = p.table || '-';
                 document.getElementById('val-records').textContent = p.records_imported.toLocaleString();
-                document.getElementById('val-speed').textContent = p.speed + ' reg/s';
+                document.getElementById('val-speed').textContent = (p.speed || 0) + ' reg/s';
                 
                 const badge = document.getElementById('status-badge');
                 if (p.status === 'running') {

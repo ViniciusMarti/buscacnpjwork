@@ -194,6 +194,11 @@ class ImportWorker {
 
             $rows = $this->bq->parseRows($response);
             $importedCount = 0;
+            $totalRows = $response['totalRows'] ?? 0;
+
+            if ($totalRows > 0 && empty($rows)) {
+                 $this->logError("Aviso: BigQuery retornou totalRows=$totalRows mas a lista de rows veio vazia. Query: " . ($sql ?? 'N/A') . " JobId: " . ($jobId ?? 'N/A') . " PageToken: " . ($pageToken ?? 'N/A'));
+            }
 
             if (!empty($rows)) {
                 $batchByShard = [];
