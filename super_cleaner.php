@@ -1,54 +1,117 @@
 <?php
 set_time_limit(0);
+ignore_user_abort(true);
 require_once __DIR__ . '/config/db.php';
 
-$password = DB_PASS;
-echo "<pre>";
-echo "=== BLOQUEANDO DUPLICATAS (CRIANDO CHAVES PRIMARIAS) ===\n";
-echo "Este processo vai deletar as duplicatas existentes automaticamente ao criar a PK.\n\n";
+// Ativa o flush para output em tempo real
+ob_implicit_flush(true);
+while (ob_get_level()) ob_end_clean();
 
-for ($i = 1; $i <= 32; $i++) {
+$password = DB_PASS;
+
+echo "<!DOCTYPE html>
+<html>
+<head>
+    <title>Super Cleaner CNPJ - Faxina Pesada</title>
+    <style>
+        body { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 20px; line-height: 1.5; }
+        .log-line { border-bottom: 1px solid #1e293b; padding: 5px 0; }
+        .error { color: #ef4444; font-weight: bold; }
+        .success { color: #22c55e; font-weight: bold; }
+        .info { color: #38bdf8; }
+        .progress { position: sticky; top: 0; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
+        #scroll-anchor { height: 1px; }
+    </style>
+    <script>
+        function scrollToBottom() {
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+        setInterval(scrollToBottom, 500);
+    </script>
+</head>
+<body>
+<div class='progress' id='p-bar'>Iniciando Faxina Pesada nos 32 Shards...</div>";
+
+function logMe($msg, $class = "") {
+    echo "<div class='log-line $class'>[" . date("H:i:s") . "] $msg</div>";
+    @flush();
+}
+
+$start = isset($_GET['start']) ? (int)$_GET['start'] : 1;
+$end = isset($_GET['end']) ? (int)$_GET['end'] : 32;
+
+logMe("Configurando faxina para Shards de $start até $end...", "info");
+
+for ($i = $start; $i <= $end; $i++) {
     $db = "u582732852_buscacnpj" . $i;
-    echo "Processando $db... ";
+    echo "<script>document.getElementById('p-bar').innerText = 'Limpando Banco: $db ($i / $end)';</script>";
+    
+    logMe("--- Conectando ao Banco: $db ---", "info");
     
     $conn = @new mysqli("localhost", $db, $password, $db);
     if ($conn->connect_error) {
-        echo "[ERRO CONEXAO]\n";
+        logMe("ERRO DE CONEXÃO: " . $conn->connect_error, "error");
         continue;
     }
 
-    // 1. Limpar duplicatas de empresas e colocar PK em cnpj_basico
-    echo "Limpando empresas... ";
-    $conn->query("CREATE TABLE empresas_new LIKE empresas");
-    $conn->query("ALTER TABLE empresas_new ADD PRIMARY KEY (cnpj_basico)");
-    $conn->query("INSERT IGNORE INTO empresas_new SELECT * FROM empresas");
-    $conn->query("RENAME TABLE empresas TO empresas_old, empresas_new TO empresas");
-    $conn->query("DROP TABLE empresas_old");
-    echo "[OK] ";
-    
-    // 2. Estabelecimento (PK no CNPJ)
-    echo "Limpando estabelecimento... ";
-    // Criamos uma tabela temporaria para garantir a limpeza
-    $conn->query("CREATE TABLE estabelecimento_new LIKE estabelecimento");
-    $conn->query("ALTER TABLE estabelecimento_new ADD PRIMARY KEY (cnpj)");
-    $conn->query("INSERT IGNORE INTO estabelecimento_new SELECT * FROM estabelecimento");
-    $conn->query("RENAME TABLE estabelecimento TO estabelecimento_old, estabelecimento_new TO estabelecimento");
-    $conn->query("DROP TABLE estabelecimento_old");
-    echo "[OK] ";
+    $tables = [
+        'empresas' => 'cnpj_basico',
+        'estabelecimento' => 'cnpj',
+        'socio' => ['cnpj_basico', 'nome_socio', 'qualificacao_socio']
+    ];
 
-    // 3. Socio (Unique no cnpj_basico + nome_socio + qualificacao_socio para evitar repetição do mesmo socio na mesma empresa)
-    echo "Limpando socio... ";
-    $conn->query("CREATE TABLE socio_new LIKE socio");
-    $conn->query("ALTER TABLE socio_new ADD UNIQUE INDEX idx_unique_socio (cnpj_basico, nome_socio, qualificacao_socio)");
-    $conn->query("INSERT IGNORE INTO socio_new SELECT * FROM socio");
-    $conn->query("RENAME TABLE socio TO socio_old, socio_new TO socio");
-    $conn->query("DROP TABLE socio_old");
-    echo "[OK]\n";
+    foreach ($tables as $table => $pk) {
+        logMe("Verificando duplicatas na tabela [$table]...");
+        
+        // Verifica se a tabela existe
+        $res = $conn->query("SHOW TABLES LIKE '$table'");
+        if ($res->num_rows == 0) {
+            logMe("Tabela [$table] não existe neste shard. Pulando.", "error");
+            continue;
+        }
+
+        // 1. Criar nova tabela com estrutura correta
+        $conn->query("DROP TABLE IF EXISTS {$table}_new");
+        $conn->query("CREATE TABLE {$table}_new LIKE $table");
+        
+        // 2. Adicionar Chave Primária ou Unique Index
+        if (is_array($pk)) {
+            $pkItems = implode(",", $pk);
+            $q = $conn->query("ALTER TABLE {$table}_new ADD UNIQUE INDEX idx_unique_clean ($pkItems)");
+            logMe("Adicionando Índice Único Composto ($pkItems)...");
+        } else {
+            $q = $conn->query("ALTER TABLE {$table}_new ADD PRIMARY KEY ($pk)");
+            logMe("Adicionando Chave Primária em ($pk)...");
+        }
+
+        if (!$q) {
+            logMe("Falha ao preparar estrutura em {$table}_new: " . $conn->error, "error");
+            continue;
+        }
+
+        // 3. Migrar dados usando INSERT IGNORE para deletar duplicatas
+        logMe("Migrando dados e deletando duplicatas (isso pode demorar)...");
+        $conn->query("INSERT IGNORE INTO {$table}_new SELECT * FROM $table");
+        $affected = $conn->affected_rows;
+        $total = $conn->query("SELECT COUNT(*) as total FROM $table")->fetch_assoc()['total'];
+        $dups = $total - $affected;
+        
+        logMe("Sucesso! [$affected] registros únicos preservados. [$dups] duplicatas removidas.", "success");
+
+        // 4. Trocar as tabelas
+        $conn->query("DROP TABLE IF EXISTS {$table}_old");
+        $conn->query("RENAME TABLE $table TO {$table}_old, {$table}_new TO $table");
+        $conn->query("DROP TABLE {$table}_old");
+        
+        logMe("Tabela [$table] selada e limpa.", "success");
+    }
 
     $conn->close();
-    flush();
+    logMe("Shard $db finalizado.", "success");
 }
 
-echo "\n=== BANCOS LIMPOS E PROTEGIDOS CONTRA DUPLICATAS ===\n";
-echo "Agora voce pode continuar a importacao sem medo.\n";
-echo "</pre>";
+echo "<div class='success' style='font-size: 24px; margin-top: 40px;'>=== FAXINA CONCLUÍDA COM SUCESSO! ===</div>
+<p>Todos os bancos foram limpos e protegidos contra duplicatas.</p>
+<div id='scroll-anchor'></div>
+</body>
+</html>";
