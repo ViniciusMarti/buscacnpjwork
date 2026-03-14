@@ -8,7 +8,7 @@ $statusFile = __DIR__ . "/status.json";
 if (isset($_GET['reset']) || !file_exists($statusFile)) {
     $status=[
      "running"=>true,
-     "fase"=>"empresas",
+     "fase"=>"estabelecimento",
      "linhas"=>0,
      "inicio"=>time(),
      "last_update"=>time(),
@@ -16,7 +16,7 @@ if (isset($_GET['reset']) || !file_exists($statusFile)) {
      "eta"=>0,
      "db"=>[],
      "arquivos_processados"=>[],
-     "fase_completa"=>[]
+     "fase_completa"=>["empresas" => true]
     ];
 
     for($i=1;$i<=32;$i++){
@@ -28,12 +28,6 @@ if (isset($_GET['reset']) || !file_exists($statusFile)) {
       "size"=>0
      ];
     }
-    file_put_contents($statusFile, json_encode($status));
-} elseif (isset($_GET['skip_empresas'])) {
-    $status = json_decode(file_get_contents($statusFile), true);
-    $status["fase_completa"]["empresas"] = true;
-    $status["fase"] = "estabelecimentos";
-    $status["running"] = true;
     file_put_contents($statusFile, json_encode($status));
 } else {
     // Resume logic: ensure status is consistent

@@ -77,13 +77,12 @@ function importar($pasta, $tabela){
     $s = status();
     if ($s['fase_completa'][$tabela] ?? false) return; // Skip if already done
 
-    $arquivos = glob("../export-cnpj-bd/$pasta/*.gz");
-    if (empty($arquivos)) {
-        $s = status();
-        $s['fase_completa'][$tabela] = true;
-        salvar($s);
-        return;
-    }
+    $root = dirname(__DIR__);
+    $arquivos = glob("$root/export-cnpj-bd/$pasta/*.gz");
+    if (empty($arquivos)) return;
+    
+    // Safety check: only mark as complete if we were surely at that phase
+    // This is handled in the main loop now.
 
     foreach ($arquivos as $arquivo) {
         $fileKey = basename($arquivo);
@@ -257,17 +256,16 @@ foreach ($fases as $pasta => $tabela) {
     $s = status(); 
     if (!($s['fase_completa'][$tabela] ?? false)) {
         
-        $basePath = realpath(__DIR__ . "/..");
-        $targetDir = $basePath . "/export-cnpj-bd/$pasta";
+        $root = dirname(__DIR__);
+        $targetDir = $root . "/export-cnpj-bd/$pasta";
         $arquivos = glob("$targetDir/*.gz");
         
         error_log("Worker: Verificando pasta $targetDir. Arquivos: " . count($arquivos));
 
         if (empty($arquivos)) {
-            $s['fase_completa'][$tabela] = true;
-            $s["fase"] = "FIM: " . $tabela;
-            salvar($s);
-            error_log("Worker: Pasta $pasta vazia, pulando.");
+            error_log("Worker: Nao foram encontrados arquivos em $targetDir. Aguardando...");
+            // Don't mark as complete automatically unless we are at the end of the script
+            // and surely verified everything. For now, let's just skip this phase in this cycle.
             continue; 
         }
 
