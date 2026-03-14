@@ -16,6 +16,25 @@ if (isset($_GET['action']) && $_GET['action'] == 'start') {
     exit;
 }
 
+// Handle Reset Request
+if (isset($_GET['action']) && $_GET['action'] == 'reset') {
+    header('Content-Type: application/json');
+    $defaultState = [
+        'ultima_data_processada' => '1900-01-01',
+        'current_table' => 'empresas',
+        'last_job_id' => null,
+        'last_page_token' => null,
+        'status' => 'idle',
+        'records_imported' => 0
+    ];
+    file_put_contents(__DIR__ . '/state.json', json_encode($defaultState, JSON_PRETTY_PRINT));
+    if (file_exists(__DIR__ . '/logs/import_progress.json')) {
+        unlink(__DIR__ . '/logs/import_progress.json');
+    }
+    echo json_encode(['status' => 'reset', 'msg' => 'Estado reiniciado com sucesso.']);
+    exit;
+}
+
 // Handle Single Step (AJAX Loop)
 if (isset($_GET['action']) && $_GET['action'] == 'step') {
     ob_start();
@@ -383,13 +402,25 @@ if (isset($_GET['action']) && $_GET['action'] == 'poll') {
 
     btnStart.onclick = async () => {
         if (isProcessing) return;
-        if (!confirm('Deseja iniciar o processo de importação via navegador? Mantenha esta aba aberta.')) return;
         
-        addLog('Iniciando pipeline via navegador...');
+        let msg = 'Deseja iniciar o processo de importação via navegador? Mantenha esta aba aberta.';
+        if (btnStart.innerText.includes('Reiniciar')) {
+            msg = 'Deseja APAGAR o progresso atual e começar do zero?';
+        }
+        
+        if (!confirm(msg)) return;
+        
+        addLog('Preparando ambiente...');
         btnStart.disabled = true;
         isProcessing = true;
         
         try {
+            // Se for reinício, resetar no servidor primeiro
+            if (btnStart.innerText.includes('Reiniciar')) {
+                await fetch('?action=reset');
+                addLog('Estado reiniciado.');
+            }
+
             const res = await fetch('?action=start');
             const data = await res.json();
             if (data.status === 'ready') {
@@ -398,6 +429,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'poll') {
             }
         } catch (e) {
             addLog('Erro de Inicialização: ' + e.message, 'log-error');
+            isProcessing = false;
             btnStart.disabled = false;
         }
     };
