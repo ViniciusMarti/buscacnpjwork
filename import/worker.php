@@ -107,6 +107,21 @@ function importar($pasta, $tabela){
 
         $headerStr = implode(",", $header);
 
+        // Identify the column to use for Sharding
+        $shardColIndex = -1;
+        if ($tabela == "empresas" || $tabela == "socio") {
+            $shardColIndex = array_search("cnpj_basico", $header);
+        } elseif ($tabela == "estabelecimento") {
+            $shardColIndex = array_search("cnpj", $header);
+            if ($shardColIndex === false) $shardColIndex = array_search("cnpj_basico", $header);
+        }
+
+        if ($shardColIndex === false || $shardColIndex === -1) {
+            error_log("Worker: Erro ao identificar coluna de Shard para $tabela. Header: $headerStr");
+            gzclose($gz);
+            continue;
+        }
+
         $lineCount = 0;
         $batch = [];
         $batchLimit = 5000;
@@ -124,12 +139,13 @@ function importar($pasta, $tabela){
             }
             
             $row = str_getcsv($line);
-            if (empty($row[0])) continue;
+            if (!isset($row[$shardColIndex]) || empty($row[$shardColIndex])) continue;
 
             // Sharding Algorithm: (cnpj_basico % 32)
-            $cnpj_full = preg_replace('/[^0-9]/', '', $row[0]);
-            if (strlen($cnpj_full) < 8) continue;
-            $cnpj_basico = substr($cnpj_full, 0, 8);
+            $cnpj_val = preg_replace('/[^0-9]/', '', $row[$shardColIndex]);
+            if (strlen($cnpj_val) < 8) continue;
+            
+            $cnpj_basico = substr($cnpj_val, 0, 8);
             $shardIndex = (intval($cnpj_basico) % 32); 
             
             $batch[$shardIndex][] = $row;
