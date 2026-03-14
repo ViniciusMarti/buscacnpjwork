@@ -9,10 +9,20 @@ ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/error.log');
 
 $lockFile = __DIR__ . "/worker.lock";
+// Check if lock file is older than 5 minutes (zombie process)
+if (file_exists($lockFile) && (time() - filemtime($lockFile) > 300)) {
+    unlink($lockFile);
+}
+
 $lockHandle = fopen($lockFile, 'w');
 if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
     die("Erro: Outra instância do worker já está rodando.");
 }
+// Touch file to update timestamp (heartbeat)
+touch($lockFile);
+
+$startTime = time();
+$maxExecutionTime = 120; // 2 minutes per cycle
 
 $password="qPMwBp#WW*BN6k";
 
@@ -62,7 +72,7 @@ function updateSizes(&$s) {
 }
 
 function importar($pasta, $tabela){
-    global $bancos;
+    global $bancos, $lockFile, $lockHandle, $startTime, $maxExecutionTime;
 
     $s = status();
     if ($s['fase_completa'][$tabela] ?? false) return; // Skip if already done
@@ -111,7 +121,12 @@ function importar($pasta, $tabela){
             $batch[$shardIndex][] = $row;
             $lineCount++;
 
-            if (count($batch, COUNT_RECURSIVE) - count($batch) >= $batchLimit) {
+            // Heartbeat every 1000 lines
+            if ($lineCount % 1000 == 0) {
+                touch($lockFile);
+            }
+
+            if (count($batch, COUNT_RECURSIVE) - count($batch) >= 1000) {
                 processBatch($batch, $tabela, $headerStr);
                 
                 $s = status();
@@ -123,6 +138,23 @@ function importar($pasta, $tabela){
                 
                 $batch = [];
                 $lineCount = 0;
+
+                // Self-termination / Auto-renewal logic
+                if (time() - $startTime > $maxExecutionTime) {
+                    gzclose($gz);
+                    flock($lockHandle, LOCK_UN);
+                    fclose($lockHandle);
+                    
+                    // Trigger successor before dying
+                    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+                    $url = "$protocol://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+                    $ch = curl_init($url);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 1);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_exec($ch);
+                    curl_close($ch);
+                    exit("Cycle finished. Successor triggered.");
+                }
             }
         }
 

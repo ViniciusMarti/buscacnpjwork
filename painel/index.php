@@ -199,8 +199,11 @@
                     // Watchdog: If stopped for more than 40s and not finished, trigger resume
                     if (!isRunning) {
                         watchdogTimer++;
+                        let wait = 15 - watchdogTimer;
+                        statusTag.innerText = "AGUARDANDO REINÍCIO (" + wait + "s)";
                         if (watchdogTimer > 15) { // ~30 seconds of inactivity
                             console.log("Watchdog: Tentando reiniciar automaticamente...");
+                            statusTag.innerText = "REINICIANDO...";
                             fetch("../import/engine.php");
                             watchdogTimer = 0;
                         }
