@@ -39,14 +39,29 @@ function salvar($s){
  file_put_contents(__DIR__ . "/status.json",json_encode($s), LOCK_EX);
 }
 
+$connections = [];
+
 function conn($db){
- global $password;
- $conn = @new mysqli("localhost", $db, $password, $db);
- if ($conn->connect_error) {
-     error_log("Falha na conexão com $db: " . $conn->connect_error);
-     return false;
- }
- return $conn;
+    global $password, $connections;
+    if (isset($connections[$db]) && $connections[$db]->ping()) {
+        return $connections[$db];
+    }
+    
+    $conn = @new mysqli("localhost", $db, $password, $db);
+    if ($conn->connect_error) {
+        error_log("Falha na conexão com $db: " . $conn->connect_error);
+        return false;
+    }
+    $connections[$db] = $conn;
+    return $conn;
+}
+
+function closeAllConns() {
+    global $connections;
+    foreach ($connections as $c) {
+        $c->close();
+    }
+    $connections = [];
 }
 
 // Global state to track which DB size to update next
@@ -178,6 +193,7 @@ function importar($pasta, $tabela){
                 // Self-termination / Auto-renewal logic
                 if (time() - $startTime > $maxExecutionTime) {
                     gzclose($gz);
+                    closeAllConns();
                     flock($lockHandle, LOCK_UN);
                     fclose($lockHandle);
                     
@@ -251,7 +267,7 @@ function processBatch($batchByShard, $tabela, $headerStr) {
         if ($tabela == "socios") $dbKey = "socio";
 
         $s["db"][$db][$dbKey] += count($rows);
-        $conn->close();
+        // Removed $conn->close() here to keep connection cached
     }
     salvar($s);
 }
@@ -315,6 +331,7 @@ $s["last_update"] = time();
 $s["velocidade"] = 0;
 salvar($s);
 
+closeAllConns();
 flock($lockHandle, LOCK_UN);
 fclose($lockHandle);
 unlink($lockFile);
