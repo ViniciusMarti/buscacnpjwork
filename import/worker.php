@@ -94,32 +94,39 @@ function triggerSuccessor() {
 $nextDbToUpdate = 0;
 
 function updateSizes(&$s) {
-    global $bancos, $password, $nextDbToUpdate;
+    global $bancos, $password;
     
-    // Update only 2 databases per call to save time
-    for ($i=0; $i<2; $i++) {
-        $db = $bancos[$nextDbToUpdate];
-        $conn = @new mysqli("localhost", $db, $password, $db);
-        if ($conn && !$conn->connect_error) {
-            $q = $conn->query("SELECT (SUM(data_length+index_length)/1024/1024) size FROM information_schema.tables WHERE table_schema='$db'");
-            if ($q) {
-                $r = $q->fetch_assoc();
-                $s["db"][$db]["size"] = round($r["size"] ?? 0, 2);
-            }
-            
-            // Check for PK protection
-            $tablesToCheck = ['empresas', 'estabelecimento', 'socio'];
-            foreach($tablesToCheck as $tbl) {
-                $hasPK = false;
-                $res = $conn->query("SHOW INDEX FROM $tbl WHERE Key_name = 'PRIMARY' OR Key_name = 'idx_unique_clean' OR Key_name = 'idx_unique_socio'");
-                if ($res && $res->num_rows > 0) $hasPK = true;
-                $s["db"][$db]["protected_$tbl"] = $hasPK;
-            }
-
-            $conn->close();
+    $idx = isset($s["next_db_index"]) ? (int)$s["next_db_index"] : 0;
+    
+    // Update protection for ALL tables in ONE shard per call (fast)
+    // Update size for ONLY that shard (slower)
+    $db = $bancos[$idx];
+    $conn = @new mysqli("localhost", $db, $password, $db);
+    if ($conn && !$conn->connect_error) {
+        $q = $conn->query("SELECT (SUM(data_length+index_length)/1024/1024) size FROM information_schema.tables WHERE table_schema='$db'");
+        if ($q) {
+            $r = $q->fetch_assoc();
+            $s["db"][$db]["size"] = round($r["size"] ?? 0, 2);
         }
-        $nextDbToUpdate = ($nextDbToUpdate + 1) % 32;
+        
+        $tablesToCheck = ['empresas', 'estabelecimento', 'socio'];
+        foreach($tablesToCheck as $tbl) {
+            $hasPK = false;
+            $res = $conn->query("SHOW INDEX FROM $tbl");
+            if ($res) {
+                while ($row = $res->fetch_assoc()) {
+                    if ($row['Key_name'] == 'PRIMARY' || $row['Key_name'] == 'idx_unique_clean' || $row['Key_name'] == 'idx_unique_socio') {
+                        $hasPK = true;
+                        break;
+                    }
+                }
+            }
+            $s["db"][$db]["protected_$tbl"] = $hasPK;
+        }
+        $conn->close();
     }
+    
+    $s["next_db_index"] = ($idx + 1) % 32;
 }
 
 function importar($pasta, $tabela){
