@@ -182,10 +182,10 @@ $s["fase"] = "empresas"; salvar($s);
 importar("empresas", "empresas");
 
 $s["fase"] = "estabelecimentos"; salvar($s);
-importar("estabelecimentos", "estabelecimento");
+importar("estabelecimentos", "estabelecimentos");
 
 $s["fase"] = "socios"; salvar($s);
-importar("socios", "socio");
+importar("socios", "socios");
 
 $s = status();
 $s["running"] = false;
