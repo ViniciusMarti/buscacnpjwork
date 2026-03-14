@@ -64,6 +64,22 @@ function closeAllConns() {
     $connections = [];
 }
 
+function triggerSuccessor() {
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'];
+    $url = "$protocol://$host" . $_SERVER['PHP_SELF'];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'ImportWorker/1.0');
+    curl_exec($ch);
+    curl_close($ch);
+    error_log("Worker: Successor triggered manually: $url");
+}
+
 // Global state to track which DB size to update next
 $nextDbToUpdate = 0;
 
@@ -139,12 +155,13 @@ function importar($pasta, $tabela){
 
         $lineCount = 0;
         $batch = [];
-        $batchLimit = 5000;
-        
+
         $byteOffset = $s['current_file_byte_offset'][$fileKey] ?? 0;
         if ($byteOffset > 0) {
             gzseek($gz, $byteOffset);
         }
+
+        $totalInBatch = 0;
         while (!gzeof($gz)) {
             $line = gzgets($gz);
             if (!$line) continue;
@@ -152,7 +169,6 @@ function importar($pasta, $tabela){
             $row = str_getcsv($line);
             if (!isset($row[$shardColIndex]) || empty($row[$shardColIndex])) continue;
 
-            // Sharding Algorithm: (cnpj_basico % 32)
             $cnpj_val = preg_replace('/[^0-9]/', '', $row[$shardColIndex]);
             if (strlen($cnpj_val) < 8) continue;
             
@@ -161,21 +177,17 @@ function importar($pasta, $tabela){
             
             $batch[$shardIndex][] = $row;
             $lineCount++;
+            $totalInBatch++;
 
-            // Heartbeat every 1000 lines
-            if ($lineCount % 1000 == 0) {
-                touch($lockFile);
-            }
+            if ($lineCount % 1000 == 0) touch($lockFile);
 
-            if (count($batch, COUNT_RECURSIVE) - count($batch) >= 1000) {
+            if ($totalInBatch >= 5000) {
                 processBatch($batch, $tabela, $headerStr);
                 
                 $s = status();
                 $now = time();
                 $timeDiff = $now - $s["last_update"];
-                if ($timeDiff > 0) {
-                    $s["velocidade"] = round($lineCount / $timeDiff);
-                }
+                if ($timeDiff > 0) $s["velocidade"] = round($lineCount / $timeDiff);
                 
                 $s["linhas"] += $lineCount;
                 $s["current_file_byte_offset"][$fileKey] = gztell($gz);
@@ -184,31 +196,16 @@ function importar($pasta, $tabela){
                 salvar($s);
                 
                 $batch = [];
+                $totalInBatch = 0;
                 $lineCount = 0;
 
-                // Self-termination / Auto-renewal logic
                 if (time() - $startTime > $maxExecutionTime) {
                     gzclose($gz);
                     closeAllConns();
                     flock($lockHandle, LOCK_UN);
                     fclose($lockHandle);
-                    
-                    // Trigger successor before dying
-                    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
-                    $host = $_SERVER['HTTP_HOST'];
-                    $url = "$protocol://$host" . $_SERVER['PHP_SELF'];
-                    
-                    $ch = curl_init($url);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_USERAGENT, 'ImportWorker/1.0');
-                    curl_exec($ch);
-                    curl_close($ch);
-                    
-                    error_log("Worker cycle finished. Successor triggered: $url");
-                    exit("Cycle finished. Successor triggered.");
+                    triggerSuccessor();
+                    exit();
                 }
             }
         }
@@ -248,16 +245,21 @@ function processBatch($batchByShard, $tabela, $headerStr) {
         $conn = conn($db);
         if (!$conn) continue;
 
+        $conn->query("START TRANSACTION");
         $values = [];
         foreach ($rows as $r) {
-            $esc = array_map([$conn, 'real_escape_string'], $r);
-            $values[] = "('" . implode("','", $esc) . "')";
+            $cleanRow = [];
+            foreach($r as $val) {
+                $cleanRow[] = $conn->real_escape_string($val);
+            }
+            $values[] = "('" . implode("','", $cleanRow) . "')";
         }
 
         $sql = "INSERT IGNORE INTO $tabela ($headerStr) VALUES " . implode(",", $values);
         if (!$conn->query($sql)) {
-            error_log("Erro no SQL para $db: " . $conn->error);
+            error_log("Erro no SQL para $db: " . $conn->error . " | SQL length: " . strlen($sql));
         }
+        $conn->query("COMMIT");
         
         $dbKey = $tabela;
         // Map any inconsistencies to the singular keys expected by the UI
