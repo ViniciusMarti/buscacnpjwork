@@ -29,9 +29,30 @@ if (isset($_GET['reset']) || !file_exists($statusFile)) {
      ];
     }
     file_put_contents($statusFile, json_encode($status));
-} else {
-    // Resume logic: just update the running status
+} elseif (isset($_GET['skip_empresas'])) {
     $status = json_decode(file_get_contents($statusFile), true);
+    $status["fase_completa"]["empresas"] = true;
+    $status["fase"] = "estabelecimentos";
+    $status["running"] = true;
+    file_put_contents($statusFile, json_encode($status));
+} else {
+    // Resume logic: ensure status is consistent
+    $status = json_decode(file_get_contents($statusFile), true);
+    
+    // Recovery: ensure all DB shards exist in the JSON
+    if (!isset($status["db"]) || !is_array($status["db"])) $status["db"] = [];
+    for($i=1;$i<=32;$i++){
+        $db="u582732852_buscacnpj".$i;
+        if (!isset($status["db"][$db])) {
+            $status["db"][$db] = [
+                "empresas"=>0,
+                "estabelecimento"=>0,
+                "socio"=>0,
+                "size"=>0
+            ];
+        }
+    }
+
     $status["running"] = true;
     $status["last_update"] = time();
     file_put_contents($statusFile, json_encode($status));

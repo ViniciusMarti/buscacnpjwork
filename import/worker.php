@@ -60,10 +60,10 @@ function updateSizes(&$s) {
         $db = $bancos[$nextDbToUpdate];
         $conn = @new mysqli("localhost", $db, $password, $db);
         if ($conn && !$conn->connect_error) {
-            $q = $conn->query("SELECT ROUND(SUM(data_length+index_length)/1024/1024,2) size FROM information_schema.tables WHERE table_schema='$db'");
+            $q = $conn->query("SELECT (SUM(data_length+index_length)/1024/1024) size FROM information_schema.tables WHERE table_schema='$db'");
             if ($q) {
                 $r = $q->fetch_assoc();
-                $s["db"][$db]["size"] = $r["size"] ?? 0;
+                $s["db"][$db]["size"] = round($r["size"] ?? 0, 2);
             }
             $conn->close();
         }
@@ -78,7 +78,12 @@ function importar($pasta, $tabela){
     if ($s['fase_completa'][$tabela] ?? false) return; // Skip if already done
 
     $arquivos = glob("../export-cnpj-bd/$pasta/*.gz");
-    if (empty($arquivos)) return;
+    if (empty($arquivos)) {
+        $s = status();
+        $s['fase_completa'][$tabela] = true;
+        salvar($s);
+        return;
+    }
 
     foreach ($arquivos as $arquivo) {
         $fileKey = basename($arquivo);
@@ -130,9 +135,15 @@ function importar($pasta, $tabela){
                 processBatch($batch, $tabela, $headerStr);
                 
                 $s = status();
+                $now = time();
+                $timeDiff = $now - $s["last_update"];
+                if ($timeDiff > 0) {
+                    $s["velocidade"] = round($lineCount / $timeDiff);
+                }
+                
                 $s["linhas"] += $lineCount;
                 $s["current_file_offset"][$fileKey] = ($s["current_file_offset"][$fileKey] ?? 0) + $lineCount;
-                $s["last_update"] = time();
+                $s["last_update"] = $now;
                 updateSizes($s);
                 salvar($s);
                 
@@ -147,12 +158,19 @@ function importar($pasta, $tabela){
                     
                     // Trigger successor before dying
                     $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
-                    $url = "$protocol://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+                    $host = $_SERVER['HTTP_HOST'];
+                    $url = "$protocol://$host" . $_SERVER['PHP_SELF'];
+                    
                     $ch = curl_init($url);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 1);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch, CURLOPT_USERAGENT, 'ImportWorker/1.0');
                     curl_exec($ch);
                     curl_close($ch);
+                    
+                    error_log("Worker cycle finished. Successor triggered: $url");
                     exit("Cycle finished. Successor triggered.");
                 }
             }
@@ -169,13 +187,18 @@ function importar($pasta, $tabela){
 
         $s = status();
         $s['arquivos_processados'][$fileKey] = true;
+        unset($s['current_file_offset'][$fileKey]);
         salvar($s);
         gzclose($gz);
     }
 
+    // Mark as complete ONLY if we finished the loop of files
     $s = status();
-    $s['fase_completa'][$tabela] = true;
-    salvar($s);
+    if (!empty($arquivos) && !isset($s['current_file_offset'])) {
+        // This is a safety check: if we processed all files, mark phase complete
+        $s['fase_completa'][$tabela] = true;
+        salvar($s);
+    }
 }
 
 function processBatch($batchByShard, $tabela, $headerStr) {
@@ -198,7 +221,11 @@ function processBatch($batchByShard, $tabela, $headerStr) {
             error_log("Erro no SQL para $db: " . $conn->error);
         }
         
-        $s["db"][$db][$tabela] += count($rows);
+        $dbKey = $tabela;
+        if ($tabela == "estabelecimentos") $dbKey = "estabelecimento";
+        if ($tabela == "socios") $dbKey = "socio";
+
+        $s["db"][$db][$dbKey] += count($rows);
         $conn->close();
     }
     salvar($s);
@@ -208,20 +235,53 @@ function processBatch($batchByShard, $tabela, $headerStr) {
 $s = status();
 $s["running"] = true;
 $s["last_update"] = time();
+if (!isset($s['fase_completa'])) $s['fase_completa'] = [];
 salvar($s);
 
-$s["fase"] = "empresas"; salvar($s);
-importar("empresas", "empresas");
+$fases = [
+    "empresas" => "empresas",
+    "estabelecimentos" => "estabelecimentos",
+    "socios" => "socios"
+];
 
-$s["fase"] = "estabelecimentos"; salvar($s);
-importar("estabelecimentos", "estabelecimentos");
+foreach ($fases as $pasta => $tabela) {
+    $s = status(); 
+    if (!($s['fase_completa'][$tabela] ?? false)) {
+        
+        // Anti-duplicate failsafe: If the folder is empty, just mark as done and move on
+        $arquivos = glob("../export-cnpj-bd/$pasta/*.gz");
+        if (empty($arquivos)) {
+            $s['fase_completa'][$tabela] = true;
+            salvar($s);
+            continue; 
+        }
 
-$s["fase"] = "socios"; salvar($s);
-importar("socios", "socios");
+        $s["fase"] = $tabela;
+        salvar($s);
+        
+        error_log("Iniciando fase: $tabela na pasta $pasta");
+        importar($pasta, $tabela);
+        
+        // After importing, check if we finished all files in this folder
+        $s = status();
+        $completos = 0;
+        foreach($arquivos as $f) {
+            if (isset($s['arquivos_processados'][basename($f)])) $completos++;
+        }
+        
+        if ($completos >= count($arquivos)) {
+            $s['fase_completa'][$tabela] = true;
+            error_log("Fase $tabela finalizada com sucesso.");
+        }
+        salvar($s);
+        break; 
+    }
+}
 
 $s = status();
 $s["running"] = false;
 $s["last_update"] = time();
+$s["velocidade"] = 0;
 salvar($s);
 
 flock($lockHandle, LOCK_UN);
